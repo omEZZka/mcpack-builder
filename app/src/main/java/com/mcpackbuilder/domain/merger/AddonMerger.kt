@@ -66,7 +66,8 @@ class AddonMerger {
         outputDir: File,
         workRoot: File,
         onProgress: (Int, String) -> Unit,
-        onLog: (String) -> Unit
+        onLog: (String) -> Unit,
+        icon: File? = null
     ): MergeResult = withContext(Dispatchers.IO) {
         if (mods.isEmpty()) throw MergeException("Сборка пуста: добавьте хотя бы один мод.")
         val missing = mods.filter { it.filePath == null || !File(it.filePath).isFile }
@@ -216,6 +217,10 @@ class AddonMerger {
             }
 
             ensureActive()
+            if (icon != null) {
+                if (hasBp) icon.copyTo(File(bpDir, "pack_icon.png"), overwrite = true)
+                if (hasRp) icon.copyTo(File(rpDir, "pack_icon.png"), overwrite = true)
+            }
             onProgress(92, "Упаковка архивов")
             val result = packageOutputs(safeName, outputDir, bpDir.takeIf { hasBp }, rpDir.takeIf { hasRp })
             onLog("Готово: ${result.output.name} (${formatSize(result.output.length())})")

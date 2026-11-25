@@ -11,7 +11,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val container = (application as App).container
         setContent {
-            MCPackTheme {
+            MCPackTheme(container.theme) {
                 AppRoot(container)
             }
         }

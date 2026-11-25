@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class BuilderUiState(
+    val icon: File? = null,
     val mods: List<ModEntry> = emptyList(),
     val buildName: String = "Моя сборка",
     val building: Boolean = false,
@@ -64,6 +65,11 @@ class BuilderViewModel(private val container: AppContainer) : ViewModel() {
     fun setBuildName(name: String) {
         _state.update { it.copy(buildName = name) }
     }
+    fun setIcon(file: File?) {
+        val previous = _state.value.icon
+        _state.update { it.copy(icon = file) }
+        if (!_state.value.building && previous != file) previous?.delete()
+    }
 
     fun remove(id: String) = container.selection.remove(id)
 
@@ -86,7 +92,7 @@ class BuilderViewModel(private val container: AppContainer) : ViewModel() {
             try {
                 val enriched = repository.enrich(mod)
                 container.selection.updateMod(mod.id) { current ->
-                    enriched.copy(filePath = current.filePath)
+                    enriched.copy(id = current.id, filePath = current.filePath)
                 }
                 val direct = repository.directDownload(enriched.downloadLinks)
                 if (direct != null) {
@@ -163,7 +169,8 @@ class BuilderViewModel(private val container: AppContainer) : ViewModel() {
                     },
                     onLog = { line ->
                         _state.update { it.copy(logs = (it.logs + line).takeLast(300)) }
-                    }
+                    },
+                    icon = snapshot.icon
                 )
                 container.library.save(
                     SavedBuild(

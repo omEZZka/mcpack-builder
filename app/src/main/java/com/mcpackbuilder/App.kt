@@ -7,6 +7,7 @@ import com.mcpackbuilder.data.store.LibraryStore
 import com.mcpackbuilder.data.store.SelectionStore
 import com.mcpackbuilder.data.web.WebFetcher
 import com.mcpackbuilder.domain.merger.AddonMerger
+import com.mcpackbuilder.ui.theme.ThemeSettings
 import java.io.File
 
 class App : Application() {
@@ -19,10 +20,10 @@ class App : Application() {
     }
 }
 
-class AppContainer(app: Application) {
-    val app: Application = app
-    val parser = McpedlParser()
+class AppContainer(val app: Application) {
+    val theme = ThemeSettings(app)
     val fetcher = WebFetcher(app)
+    val parser = McpedlParser()
     val selection = SelectionStore(app)
     val downloads = DownloadRepository(app)
     val library = LibraryStore(app)

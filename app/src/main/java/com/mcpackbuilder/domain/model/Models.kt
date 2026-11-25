@@ -17,7 +17,10 @@ data class ModEntry(
     val downloadLinks: List<String> = emptyList(),
     val filePath: String? = null,
     val typeId: Int = 1,
-    val downloadCount: Long? = null
+    val downloadCount: Long? = null,
+    val published: String = "",
+    val downloadsToday: Long? = null,
+    val source: String = "mcpedl"
 ) {
     val isDownloaded: Boolean get() = filePath != null && File(filePath).isFile
 }
@@ -50,12 +53,24 @@ data class MergeResult(
 
 class MergeException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
-enum class ModCategory(val title: String, val path: String, val typeId: Int?) {
-    ADDONS("Аддоны", "addons", 1),
-    TEXTURES("Текстуры", "addons/texture-packs", 3),
-    SHADERS("Шейдеры", "texture-packs/shaders", 3),
-    ALL("Всё", "addons", null);
+enum class ModCategory(val path: String, val typeId: Int?, val mcpehubPath: String) {
+    MODS("mods", 1, "mods"),
+    TEXTURES("texture-packs", 3, "textures"),
+    SHADERS("texture-packs/shaders", 3, "shaders"),
+    MAPS("maps", 2, "maps");
 
-    val pageUrl: String
-        get() = "https://mcpedl.com/${path.trim('/')}/"
+    val pageUrl: String get() = "https://mcpedl.com/${path.trim('/')}/"
+    val mcpehubUrl: String get() = "https://mcpehub.org/${mcpehubPath.trim('/')}"
+}
+
+enum class CatalogSort(val api: String) {
+    NEW("created_at"),
+    OLD("created_at"),
+    TODAY("popularity_week"),
+    WEEK("popularity_week"),
+    MONTH("popularity_month")
+}
+
+enum class CatalogSource {
+    MCPEDL, MCPEHUB
 }

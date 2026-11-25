@@ -6,7 +6,10 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.mcpackbuilder.AppContainer
+import com.mcpackbuilder.data.download.MapImporter
 import com.mcpackbuilder.data.parser.McpedlRepository
+import com.mcpackbuilder.domain.model.CatalogSort
+import com.mcpackbuilder.domain.model.CatalogSource
 import com.mcpackbuilder.domain.model.ModCategory
 import com.mcpackbuilder.domain.model.ModEntry
 import kotlinx.coroutines.CancellationException
@@ -18,8 +21,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class CatalogUiState(
+    val sort: CatalogSort = CatalogSort.NEW,
+    val source: CatalogSource = CatalogSource.MCPEDL,
     val query: String = "",
-    val category: ModCategory = ModCategory.ADDONS,
+    val category: ModCategory = ModCategory.MODS,
     val items: List<ModEntry> = emptyList(),
     val page: Int = 1,
     val pageCount: Int = 1,
@@ -28,17 +33,16 @@ data class CatalogUiState(
     val loadingMore: Boolean = false,
     val loaded: Boolean = false,
     val error: String? = null,
-    val message: String? = null,
-    val selectedUrls: Set<String> = emptySet()
+    val selectedUrls: Set<String> = emptySet(),
+    val message: String? = null
 )
 
 class CatalogViewModel(private val container: AppContainer) : ViewModel() {
 
-    private val repository = McpedlRepository(container.parser, container.fetcher)
+    private val repo = McpedlRepository(container.parser, container.fetcher)
     private val _state = MutableStateFlow(CatalogUiState())
     val state: StateFlow<CatalogUiState> = _state.asStateFlow()
-
-    private var searchJob: Job? = null
+    private var loadJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -46,85 +50,69 @@ class CatalogViewModel(private val container: AppContainer) : ViewModel() {
                 _state.update { it.copy(selectedUrls = mods.map { m -> m.pageUrl }.toSet()) }
             }
         }
-        load(reset = true)
+        load(true)
     }
 
-    fun onQueryChange(query: String) {
-        _state.update { it.copy(query = query) }
-    }
-
-    fun search() = load(reset = true)
-
-    fun refresh() = load(reset = true)
-
-    fun setCategory(category: ModCategory) {
-        if (_state.value.category == category) return
-        _state.update { it.copy(category = category) }
-        load(reset = true)
-    }
-
-    fun loadMore() {
-        val current = _state.value
-        if (current.loading || current.loadingMore) return
-        if (current.page >= current.pageCount) return
-        load(reset = false)
-    }
+    fun setQuery(q: String) { _state.update { it.copy(query = q) } }
+    fun setSort(s: CatalogSort) { _state.update { it.copy(sort = s) }; load(true) }
+    fun setSource(src: CatalogSource) { _state.update { it.copy(source = src) }; load(true) }
+    fun setCategory(c: ModCategory) { _state.update { it.copy(category = c) }; load(true) }
+    fun consumeMessage() { _state.update { it.copy(message = null) } }
 
     fun addToBuild(mod: ModEntry) {
         val added = container.selection.add(mod)
-        _state.update {
-            it.copy(
-                message = if (added) "«${mod.title}» добавлен в сборку" else "«${mod.title}» уже в сборке"
-            )
-        }
+        _state.update { it.copy(message = if (added) "add:${mod.title}" else "exists:${mod.title}") }
     }
 
-    fun consumeMessage() {
-        _state.update { it.copy(message = null) }
-    }
-
-    private fun load(reset: Boolean) {
-        val current = _state.value
-        if (reset && current.loading) {
-            searchJob?.cancel()
-        }
-        if (!reset && (current.loading || current.loadingMore)) return
-        val page = if (reset) 1 else current.page + 1
-        _state.update {
-            it.copy(loading = reset, loadingMore = !reset, error = null)
-        }
-        searchJob?.cancel()
-        searchJob = viewModelScope.launch {
+    fun downloadMap(mod: ModEntry) {
+        viewModelScope.launch {
+            _state.update { it.copy(message = "downloading:${mod.title}") }
             try {
-                val result = repository.catalog(
-                    query = current.query.trim(),
-                    category = current.category,
-                    page = page
-                )
-                _state.update { s ->
-                    val merged = if (reset) result.items else (s.items + result.items)
-                    s.copy(
-                        items = merged.distinctBy { it.pageUrl },
-                        page = result.page,
-                        pageCount = result.pageCount,
-                        total = result.total,
-                        loading = false,
-                        loadingMore = false,
-                        loaded = true,
-                        error = null
-                    )
-                }
-            } catch (e: CancellationException) {
-                throw e
+                val enriched = repo.enrich(mod, _state.value.source)
+                val link = repo.directDownload(enriched.downloadLinks) ?: enriched.downloadLinks.firstOrNull()
+                    ?: throw IllegalStateException("no-link")
+                MapImporter.download(container, mod.title, link)
+                _state.update { it.copy(message = "map-saved:${mod.title}") }
             } catch (e: Exception) {
+                _state.update { it.copy(message = "map-error:${e.message ?: ""}") }
+            }
+        }
+    }
+
+    fun load(refresh: Boolean = false) {
+        loadJob?.cancel()
+        val current = _state.value
+        val nextPage = if (refresh) 1 else current.page
+        loadJob = viewModelScope.launch {
+            _state.update { it.copy(loading = refresh || !it.loaded, loadingMore = !refresh && it.loaded, error = null, page = nextPage) }
+            try {
+                val result = repo.catalog(_state.value.query, _state.value.category, nextPage, _state.value.sort, _state.value.source)
                 _state.update {
-                    it.copy(
-                        loading = false,
-                        loadingMore = false,
-                        loaded = true,
-                        error = e.message ?: "Не удалось загрузить каталог"
-                    )
+                    val merged = if (refresh) result.items else (it.items + result.items).distinctBy { m -> m.pageUrl }
+                    it.copy(items = merged, page = result.page, pageCount = result.pageCount, total = result.total, loading = false, loadingMore = false, loaded = true, error = null)
                 }
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                _state.update { it.copy(loading = false, loadingMore = false, loaded = true, error = e.message ?: "error") }
+            }
+        }
+    }
+
+    fun loadMore() {
+        val s = _state.value
+        if (s.loading || s.loadingMore || s.page >= s.pageCount) return
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            _state.update { it.copy(loadingMore = true, error = null) }
+            try {
+                val result = repo.catalog(s.query, s.category, s.page + 1, s.sort, s.source)
+                _state.update {
+                    val merged = (it.items + result.items).distinctBy { m -> m.pageUrl }
+                    it.copy(items = merged, page = result.page, pageCount = result.pageCount, total = result.total, loadingMore = false, loaded = true)
+                }
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                _state.update { it.copy(loadingMore = false, error = e.message ?: "error") }
             }
         }
     }
