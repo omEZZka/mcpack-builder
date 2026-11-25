@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.MCPackBuilder" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#FFF6F7F2</item>
+        <item name="android:statusBarColor">#FF2E5E3A</item>
+        <item name="android:navigationBarColor">#FFF6F7F2</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <style name="Theme.MCPackBuilder.Translucent" parent="android:Theme.Translucent.NoTitleBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+</resources>
