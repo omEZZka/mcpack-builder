@@ -25,10 +25,10 @@ import com.mcpackbuilder.ui.theme.MCPackTheme
 
 @Composable
 fun EmptyState(
-    icon: ImageVector,
     title: String,
-    subtitle: String,
-    modifier: Modifier = Modifier
+    subtitle: String = "",
+    modifier: Modifier = Modifier,
+    action: (@Composable () -> Unit)? = null
 ) {
     Column(
         modifier = modifier
@@ -37,11 +37,12 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
+        Text(
+            text = "ℹ",
+            style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.size(56.dp),
-            tint = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
         )
         Text(
             text = title,
@@ -56,6 +57,9 @@ fun EmptyState(
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 8.dp)
         )
+        if (action != null) {
+            Button(onClick = action) { Text("Попробовать снова") }
+        }
     }
 }
 
@@ -119,6 +123,24 @@ fun KeyValueRow(label: String, value: String) {
         )
         Text(text = value, style = MaterialTheme.typography.bodyMedium)
     }
+}
+
+@Composable
+fun SectionHeader(title: String, subtitle: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(text = title, style = MaterialTheme.typography.headlineSmall)
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp)
+        )
+    }
+}
+
+@Composable
+fun SmallTag(text: String, modifier: Modifier = Modifier) {
+    InfoPill(text = text, modifier = modifier)
 }
 
 @Composable

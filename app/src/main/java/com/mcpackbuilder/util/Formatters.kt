@@ -23,3 +23,5 @@ fun formatDownloads(count: Long?): String? {
         else -> count.toString()
     }
 }
+
+fun formatCompact(count: Long?): String = formatDownloads(count) ?: ""
