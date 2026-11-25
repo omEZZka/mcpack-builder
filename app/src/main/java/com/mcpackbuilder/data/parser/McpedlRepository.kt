@@ -32,7 +32,7 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
         return if (trimmed.isBlank()) {
             val apiUrl = "https://mcpedl.com/api/list?type_id=${category.typeId ?: 1}&sort=${sort.api}&order=desc&limit=20&page=$page&platform_id=2"
             val doc = fetcher.getDocument(apiUrl)
-            val json = org.jsoup.Jsoup.parse(doc.html()).text()
+            val json = org.jsoup.Jsoup.parse(doc.html).text()
             parser.parseApiList(json, category)
         } else {
             val pageUrl = buildString {
@@ -43,7 +43,7 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
                 if (page > 1) append("&page=$page")
             }
             val doc = fetcher.getDocument(pageUrl)
-            parser.parseCatalog(doc.html(), doc.finalUrl, category)
+            parser.parseCatalog(doc.html, doc.finalUrl, category)
         }
     }
 
@@ -57,7 +57,7 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
             if (page <= 1) "https://mcpehub.org/?s=$q" else "https://mcpehub.org/page/$page/?s=$q"
         }
         val doc = fetcher.getDocument(url)
-        return parseMcpehubListing(doc.html(), doc.finalUrl, category)
+        return parseMcpehubListing(doc.html, doc.finalUrl, category)
     }
 
     fun parseMcpehubListing(html: String, baseUrl: String, category: ModCategory): CatalogResult {
@@ -93,7 +93,7 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
     suspend fun enrich(entry: ModEntry, source: CatalogSource = if (entry.source == "mcpehub") CatalogSource.MCPEHUB else CatalogSource.MCPEDL): ModEntry {
         detailCache[entry.pageUrl]?.let { return it }
         val doc = fetcher.getDocument(entry.pageUrl)
-        val detailed = if (entry.source == "mcpehub" || source == CatalogSource.MCPEHUB) parseMcpehubDetail(entry, doc.html(), doc.finalUrl) else parser.parseDetail(entry, doc.html(), doc.finalUrl)
+        val detailed = if (entry.source == "mcpehub" || source == CatalogSource.MCPEHUB) parseMcpehubDetail(entry, doc.html, doc.finalUrl) else parser.parseDetail(entry, doc.html, doc.finalUrl)
         detailCache[entry.pageUrl] = detailed
         return detailed
     }

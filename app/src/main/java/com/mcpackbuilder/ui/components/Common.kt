@@ -58,7 +58,7 @@ fun EmptyState(
             modifier = Modifier.padding(top = 8.dp)
         )
         if (action != null) {
-            Button(onClick = action) { Text("Попробовать снова") }
+            Box(modifier = Modifier.padding(top = 12.dp)) { action() }
         }
     }
 }
