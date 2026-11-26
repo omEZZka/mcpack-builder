@@ -247,7 +247,7 @@ private fun AboutSettingsTab() {
             SettingsCard(title = s.appName, subtitle = s.aboutSubtitle) {
                 Text(s.appDescription, style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.height(4.dp))
-                Text("${s.version}: 1.0", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("${s.version}: ${com.mcpackbuilder.BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
