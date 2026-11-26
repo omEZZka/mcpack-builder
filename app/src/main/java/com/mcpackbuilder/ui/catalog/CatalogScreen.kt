@@ -1,16 +1,9 @@
 package com.mcpackbuilder.ui.catalog
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -54,13 +47,12 @@ fun CatalogScreen(container: AppContainer, onMessage: (String) -> Unit, onOpenBu
             msg.startsWith("map-saved:") -> onMessage(s.mapSavedToBuilds)
             msg.startsWith("map-error:") -> onMessage(s.mapDownloadFailed(msg.removePrefix("map-error:")))
             msg.startsWith("downloading:") -> onMessage(s.downloadingArchive)
-            else -> {} // Silent for add:/exists: to avoid spam
+            else -> {}
         }
         viewModel.consumeMessage()
     }
 
     Column(Modifier.fillMaxSize()) {
-        // Header with search
         Surface(shadowElevation = 4.dp, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(s.catalogTitle, style = MaterialTheme.typography.headlineMedium)
@@ -83,9 +75,7 @@ fun CatalogScreen(container: AppContainer, onMessage: (String) -> Unit, onOpenBu
             }
         }
         
-        // Scrollable filters
         Column(Modifier.padding(vertical = 8.dp)) {
-            // Categories
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Spacer(Modifier.width(8.dp))
                 Text("Категории:", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(end = 8.dp))
@@ -99,7 +89,6 @@ fun CatalogScreen(container: AppContainer, onMessage: (String) -> Unit, onOpenBu
                 Spacer(Modifier.width(8.dp))
             }
             Spacer(Modifier.height(6.dp))
-            // Sort
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Spacer(Modifier.width(8.dp))
                 Text("Сортировка:", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(end = 8.dp))
@@ -113,7 +102,6 @@ fun CatalogScreen(container: AppContainer, onMessage: (String) -> Unit, onOpenBu
                 Spacer(Modifier.width(8.dp))
             }
             Spacer(Modifier.height(6.dp))
-            // Tags
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Spacer(Modifier.width(8.dp))
                 Text("Теги:", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(end = 8.dp))
@@ -131,7 +119,6 @@ fun CatalogScreen(container: AppContainer, onMessage: (String) -> Unit, onOpenBu
                 Spacer(Modifier.width(8.dp))
             }
             Spacer(Modifier.height(6.dp))
-            // Source
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.width(8.dp))
                 Text(s.source + ":", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(end = 8.dp))
@@ -182,12 +169,9 @@ private fun ModCard(mod: ModEntry, added: Boolean, onAdd: () -> Unit) {
         )
     ) {
         Row(Modifier.padding(14.dp)) {
-            // Cover image with rounded corners
             CoverImage(
                 url = mod.coverUrl, 
-                modifier = Modifier
-                    .size(100.dp)
-                    ,
+                modifier = Modifier.size(100.dp),
                 contentDescription = mod.title
             )
             Spacer(Modifier.width(14.dp))
@@ -200,9 +184,7 @@ private fun ModCard(mod: ModEntry, added: Boolean, onAdd: () -> Unit) {
                     color = if (added) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    mod.category?.let { 
-                        SmallTag(it)
-                    }
+                    mod.category?.let { SmallTag(it) }
                     mod.version?.let { SmallTag(it) }
                     mod.downloadCount?.let { 
                         Surface(shape = MaterialTheme.shapes.extraSmall, color = MaterialTheme.colorScheme.secondaryContainer) {
