@@ -21,8 +21,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mcpackbuilder.AppContainer
 import com.mcpackbuilder.ui.theme.LocalStrings
 
-data class ChatMessage(val text: String, val isUser: Boolean, val timestamp: Long = System.currentTimeMillis())
-
 @Composable
 fun ChatScreen(container: AppContainer, onMessage: (String) -> Unit) {
     val viewModel: ChatViewModel = viewModel(factory = ChatViewModel.factory(container))
