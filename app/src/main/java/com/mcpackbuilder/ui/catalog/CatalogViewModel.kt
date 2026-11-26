@@ -93,12 +93,12 @@ class CatalogViewModel(private val container: AppContainer) : ViewModel() {
                     loadingMore = !refresh && it.loaded, 
                     error = null, 
                     page = nextPage,
-                    items = if (refresh) emptyList() else it.items  // Clear items on refresh
+                    items = if (refresh) emptyList() else it.items
                 ) 
             }
             try {
-                // Use ALL tag if query is empty and tag is ALL
-                val tagToUse = if (current.query.trim().isEmpty()) current.tag else CatalogTag.ALL
+                // Only pass tag if it's not ALL - API doesn't support ALL tag
+                val tagToUse = if (current.tag != CatalogTag.ALL && current.query.trim().isEmpty()) current.tag else CatalogTag.ALL
                 val result = repo.catalog(current.query, current.category, nextPage, current.sort, current.source, tagToUse)
                 _state.update {
                     val merged = if (refresh) result.items else (it.items + result.items).distinctBy { m -> m.pageUrl }
@@ -110,7 +110,7 @@ class CatalogViewModel(private val container: AppContainer) : ViewModel() {
                         loading = false, 
                         loadingMore = false, 
                         loaded = true, 
-                        error = null
+                        error = if (merged.isEmpty() && current.tag != CatalogTag.ALL) "По тегу '${current.tag.name}' ничего не найдено" else null
                     )
                 }
             } catch (e: CancellationException) { throw e }
@@ -120,7 +120,7 @@ class CatalogViewModel(private val container: AppContainer) : ViewModel() {
                         loading = false, 
                         loadingMore = false, 
                         loaded = true, 
-                        error = e.message ?: "Ошибка загрузки каталога"
+                        error = "Ошибка: ${e.message ?: "неизвестная"}"
                     ) 
                 }
             }

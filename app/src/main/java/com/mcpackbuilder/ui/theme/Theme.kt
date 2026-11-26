@@ -251,51 +251,87 @@ private fun AiAgentSettingsTab(context: android.content.Context) {
     var testing by remember { mutableStateOf(false) }
     var connected by remember { mutableStateOf(false) }
     
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
-            SettingsCard(title = s.aiAgent, subtitle = s.aiAgentHint) {
+            Text("AI Агент", style = MaterialTheme.typography.headlineMedium)
+            Text(s.aiAgentHint, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        
+        item {
+            SettingsCard(title = "Подключение", subtitle = "Настройки API сервера") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(config.enabled, { 
                         config = config.copy(enabled = it)
                         agent.saveConfig(config)
                     })
                     Spacer(Modifier.width(8.dp))
-                    Text(s.aiAgentEnabled)
+                    Text(s.aiAgentEnabled, style = MaterialTheme.typography.titleMedium)
                 }
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(config.baseUrl, { 
-                    config = config.copy(baseUrl = it)
-                    agent.saveConfig(config)
-                }, label = { Text(s.aiAgentBaseUrl) }, singleLine = true, modifier = Modifier.fillMaxWidth(), enabled = config.enabled)
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = config.baseUrl,
+                    onValueChange = { config = config.copy(baseUrl = it); agent.saveConfig(config) },
+                    label = { Text(s.aiAgentBaseUrl) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = config.enabled,
+                    placeholder = { Text("https://api.example.com") }
+                )
                 Spacer(Modifier.height(8.dp))
-                OutlinedTextField(config.apiKey, { 
-                    config = config.copy(apiKey = it)
-                    agent.saveConfig(config)
-                }, label = { Text(s.aiAgentApiKey) }, singleLine = true, modifier = Modifier.fillMaxWidth(), 
-                    enabled = config.enabled, )
+                OutlinedTextField(
+                    value = config.apiKey,
+                    onValueChange = { config = config.copy(apiKey = it); agent.saveConfig(config) },
+                    label = { Text(s.aiAgentApiKey) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = config.enabled
+                )
                 Spacer(Modifier.height(8.dp))
-                OutlinedTextField(config.model, { 
-                    config = config.copy(model = it)
-                    agent.saveConfig(config)
-                }, label = { Text(s.aiAgentModel) }, singleLine = true, modifier = Modifier.fillMaxWidth(), enabled = config.enabled)
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Button(onClick = { 
-                        testing = true
-                        connected = config.baseUrl.isNotEmpty() && config.apiKey.isNotEmpty()
-                        testing = false
-                    }, enabled = config.enabled && config.baseUrl.isNotEmpty()) {
-                        if (testing) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Default.Check, null, Modifier.size(16.dp))
+                OutlinedTextField(
+                    value = config.model,
+                    onValueChange = { config = config.copy(model = it); agent.saveConfig(config) },
+                    label = { Text(s.aiAgentModel) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = config.enabled,
+                    placeholder = { Text("gpt-4, llama, etc.") }
+                )
+            }
+        }
+        
+        item {
+            SettingsCard(title = "Функции", subtitle = "Возможности AI") {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    listOf(
+                        "Авто-скачивание модов" to "Загрузка всех модов при сборке",
+                        "Исправление конфликтов" to "Разрешение коллизий файлов",
+                        "Рекомендации модов" to "Подбор совместимых аддонов"
+                    ).forEach { (title, desc) ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(true, {})
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Text(title, style = MaterialTheme.typography.bodyMedium)
+                                Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
-                        Spacer(Modifier.width(4.dp))
+                    }
+                }
+            }
+        }
+        
+        item {
+            SettingsCard(title = "Тест", subtitle = "Проверка соединения") {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(
+                        onClick = { testing = true; connected = config.baseUrl.isNotEmpty(); testing = false },
+                        enabled = config.enabled && config.baseUrl.isNotEmpty()
+                    ) {
+                        Icon(if (testing) Icons.Default.Refresh else Icons.Default.Check, null, Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(s.aiAgentTest)
                     }
-                    if (connected) {
-                        Text(s.aiAgentConnected, color = MaterialTheme.colorScheme.primary)
-                    }
+                    if (connected) Text("✓ Подключено", color = MaterialTheme.colorScheme.primary)
                 }
             }
         }

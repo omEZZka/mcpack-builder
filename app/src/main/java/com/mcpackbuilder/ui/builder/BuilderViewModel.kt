@@ -165,14 +165,9 @@ class BuilderViewModel(private val container: AppContainer) : ViewModel() {
             _state.update { it.copy(message = "Добавьте хотя бы один мод") }
             return
         }
-        // Auto-download mods if AI agent is enabled
-        val config = aiClient.loadConfig()
-        if (config.enabled && mods.any { !it.isDownloaded }) {
-            downloadAllMods()
-            return
-        }
+        // Auto-download mods if any are not downloaded
         if (mods.any { !it.isDownloaded }) {
-            _state.update { it.copy(message = "Сначала скачайте все моды (кнопка «Скачать»)") }
+            downloadAllMods()
             return
         }
         val name = snapshot.buildName.trim().ifBlank { "Моя сборка" }
@@ -241,18 +236,18 @@ class BuilderViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    private fun downloadAllMods() {
-        if (_state.value.autoDownloading) return
-        _state.update { it.copy(autoDownloading = true, downloadStatus = "Авто-скачивание модов...") }
+    fun downloadAllMods() {
+        if (_state.value.autoDownloading || _state.value.downloadingModId != null) return
+        _state.update { it.copy(autoDownloading = true, downloadStatus = "Скачивание модов...") }
         
         viewModelScope.launch {
             val modsToDownload = _state.value.mods.filter { !it.isDownloaded }
             var successCount = 0
             var failCount = 0
             
-            modsToDownload.forEach { mod ->
+            for (mod in modsToDownload) {
                 try {
-                    _state.update { it.copy(downloadingModId = mod.id) }
+                    _state.update { it.copy(downloadingModId = mod.id, downloadStatus = "Скачивание: ${mod.title}") }
                     val enriched = repository.enrich(mod)
                     container.selection.updateMod(mod.id) { current ->
                         enriched.copy(id = current.id, filePath = current.filePath)
@@ -264,9 +259,11 @@ class BuilderViewModel(private val container: AppContainer) : ViewModel() {
                         container.selection.attachFile(mod.id, file.absolutePath)
                         successCount++
                     } else {
+                        _state.update { it.copy(message = "Нет прямой ссылки для ${mod.title}") }
                         failCount++
                     }
                 } catch (e: Exception) {
+                    _state.update { it.copy(message = "Ошибка скачивания ${mod.title}: ${e.message}") }
                     failCount++
                 }
             }
@@ -275,18 +272,21 @@ class BuilderViewModel(private val container: AppContainer) : ViewModel() {
                 it.copy(
                     autoDownloading = false,
                     downloadingModId = null,
-                    downloadStatus = null,
-                    message = "Скачано: $successCount, Ошибок: $failCount"
+                    downloadStatus = if (failCount == 0) null else "Ошибок: $failCount"
                 )
             }
             
-            // Retry build if all downloads succeeded
-            if (failCount == 0) {
+            // Auto-retry build if all succeeded
+            if (failCount == 0 && successCount > 0) {
                 build()
             }
         }
     }
 
+    fun downloadMod(mod: ModEntry) {
+        download(mod)
+    }
+    
     fun consumeMessage() {
         _state.update { it.copy(message = null) }
     }

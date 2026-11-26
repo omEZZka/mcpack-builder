@@ -92,20 +92,62 @@ fun BuilderScreen(container: AppContainer, onMessage: (String) -> Unit) {
         if (state.mods.isEmpty()) item { EmptyState(s.myBuilds, s.addFromDevice) }
         itemsIndexed(state.mods, key = { _, m -> m.pageUrl }) { i, mod ->
             ElevatedCard(Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(mod.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
-                        Text(mod.filePath ?: mod.pageUrl, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Column(Modifier.padding(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(mod.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                if (mod.isDownloaded) "✓ Скачан" else "⚠ Требуется скачивание",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (mod.isDownloaded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            )
+                        }
+                        Row {
+                            IconButton(onClick = { vm.moveUp(mod.id) }, enabled = i > 0) { Icon(Icons.Default.ArrowUpward, null) }
+                            IconButton(onClick = { vm.moveDown(mod.id) }, enabled = i < state.mods.lastIndex) { Icon(Icons.Default.ArrowDownward, null) }
+                        }
                     }
-                    IconButton(onClick = { vm.moveUp(mod.id) }, enabled = i > 0) { Icon(Icons.Default.ArrowUpward, null) }
-                    IconButton(onClick = { vm.moveDown(mod.id) }, enabled = i < state.mods.lastIndex) { Icon(Icons.Default.ArrowDownward, null) }
-                    IconButton(onClick = { vm.remove(mod.id) }) { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (!mod.isDownloaded) {
+                            Button(onClick = { vm.downloadMod(mod) }, enabled = state.downloadingModId == null) {
+                                Icon(Icons.Default.Download, null, Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Скачать")
+                            }
+                        }
+                        OutlinedButton(onClick = { vm.remove(mod.id) }) {
+                            Icon(Icons.Default.Delete, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                            Spacer(Modifier.width(4.dp))
+                            Text("Удалить", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
                 }
             }
         }
         item {
-            Button(onClick = { if (vm.requestExport()) confirmExport = true }, enabled = state.mods.isNotEmpty() && !state.building, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                Icon(Icons.Default.Build, null); Spacer(Modifier.width(8.dp)); Text(if (state.building) s.building else s.build)
+            // Download All button
+            if (state.mods.any { !it.isDownloaded }) {
+                OutlinedButton(
+                    onClick = { vm.downloadAllMods() },
+                    enabled = !state.autoDownloading && state.downloadingModId == null,
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                ) {
+                    Icon(Icons.Default.Download, null, Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (state.autoDownloading) "Скачивание..." else "Скачать все моды (${state.mods.count { !it.isDownloaded }})")
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+            // Build button
+            Button(
+                onClick = { if (vm.requestExport()) confirmExport = true },
+                enabled = state.mods.isNotEmpty() && !state.building && state.mods.all { it.isDownloaded },
+                modifier = Modifier.fillMaxWidth().height(52.dp)
+            ) {
+                Icon(Icons.Default.Build, null, Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(if (state.building) s.building else s.build)
             }
         }
         if (state.building) item { LinearProgressIndicator(progress = { state.progress / 100f }, modifier = Modifier.fillMaxWidth()); Text("${state.progress}% · ${state.stage}", style = MaterialTheme.typography.bodySmall) }

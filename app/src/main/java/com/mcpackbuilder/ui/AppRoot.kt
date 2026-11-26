@@ -15,6 +15,7 @@ import com.mcpackbuilder.AppContainer
 import com.mcpackbuilder.ui.builder.BuilderScreen
 import com.mcpackbuilder.ui.catalog.CatalogScreen
 import com.mcpackbuilder.ui.library.LibraryScreen
+import com.mcpackbuilder.ui.agent.ChatScreen
 import com.mcpackbuilder.ui.theme.LocalStrings
 import com.mcpackbuilder.ui.theme.ThemeScreen
 import kotlinx.coroutines.launch
@@ -23,6 +24,7 @@ private object Routes {
     const val CATALOG = "catalog"
     const val BUILDER = "builder"
     const val LIBRARY = "library"
+    const val CHAT = "chat"
     const val SETTINGS = "settings"
 }
 
@@ -36,6 +38,7 @@ fun AppRoot(container: AppContainer) {
     val tabs = listOf(
         Triple(Routes.CATALOG, s.navCatalog, Icons.Default.Store),
         Triple(Routes.BUILDER, s.navBuilder, Icons.Default.Build),
+        Triple(Routes.CHAT, "AI Чат", Icons.Default.Chat),
         Triple(Routes.LIBRARY, s.navLibrary, Icons.Default.Folder),
         Triple(Routes.SETTINGS, s.navSettings, Icons.Default.Settings),
     )
@@ -61,6 +64,7 @@ fun AppRoot(container: AppContainer) {
             composable(Routes.CATALOG) { CatalogScreen(container, showMessage) { nav.navigate(Routes.BUILDER) { popUpTo(nav.graph.findStartDestination().id) { saveState = true }; launchSingleTop = true; restoreState = true } } }
             composable(Routes.BUILDER) { BuilderScreen(container, showMessage) }
             composable(Routes.LIBRARY) { LibraryScreen(container, showMessage) }
+            composable(Routes.CHAT) { ChatScreen(container, showMessage) }
             composable(Routes.SETTINGS) { ThemeScreen(container.theme, container.app) }
         }
     }
