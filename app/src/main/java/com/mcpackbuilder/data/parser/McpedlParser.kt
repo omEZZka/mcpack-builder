@@ -60,8 +60,12 @@ open class McpedlParser {
             val img = fb.selectFirst("img[src]") ?: fb.selectFirst("div.post__img__background")
             var cover: String? = null
             if (img != null) {
-                val src = img.attr("src").ifBlank { img.attr("data-src") }.ifBlank { img.attr("data-lazy-src") }
-                    .ifBlank { img.attr("style").let { s -> Regex("url\\(['"]?([^'")]*)['"]?\\)").find(s)?.groupValues?.getOrNull(1) ?: "" } }
+                val srcAttr = img.attr("src").ifBlank { img.attr("data-src") }.ifBlank { img.attr("data-lazy-src") }
+                val src = if (srcAttr.isNotBlank()) srcAttr else {
+                    val style = img.attr("style")
+                    val m = Regex("""url\(['"]?([^'")]*)['"]?\)""").find(style)
+                    m?.groupValues?.getOrNull(1) ?: ""
+                }
                 cover = normalizeUrl(src, baseUrl)
             }
             val id = href.trimEnd('/').substringAfterLast('/').ifBlank { href.hashCode().toString() }
