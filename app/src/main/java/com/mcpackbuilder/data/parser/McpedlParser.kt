@@ -49,6 +49,33 @@ open class McpedlParser {
     fun parseCatalog(html: String, baseUrl: String, category: ModCategory): CatalogResult {
         val doc = Jsoup.parse(html, baseUrl)
         val items = linkedSetOf<ModEntry>()
+        // MCPEDL new structure: .fancybox.post with .fancybox__title-top > a
+        val fancyBoxes = doc.select("div.fancybox.post")
+        for (fb in fancyBoxes) {
+            val titleDiv = fb.selectFirst("div.fancybox__title-top") ?: continue
+            val a = titleDiv.selectFirst("a[href]") ?: continue
+            val href = normalizeUrl(a.absUrl("href").ifBlank { a.attr("href") }, baseUrl) ?: continue
+            if (!isContentUrl(href)) continue
+            val title = a.text().trim().takeIf { it.length > 2 && !it.equals("Download", true) } ?: continue
+            val img = fb.selectFirst("img[src]") ?: fb.selectFirst("div.post__img__background")
+            var cover: String? = null
+            if (img != null) {
+                val src = img.attr("src").ifBlank { img.attr("data-src") }.ifBlank { img.attr("data-lazy-src") }
+                    .ifBlank { img.attr("style").let { s -> Regex("url\\(['"]?([^'")]*)['"]?\\)").find(s)?.groupValues?.getOrNull(1) ?: "" } }
+                cover = normalizeUrl(src, baseUrl)
+            }
+            val id = href.trimEnd('/').substringAfterLast('/').ifBlank { href.hashCode().toString() }
+            items += ModEntry(id = id, title = title, coverUrl = cover, pageUrl = href, category = category.name.lowercase(), typeId = category.typeId ?: 1, source = "mcpedl")
+        }
+        if (items.isNotEmpty()) {
+            val page = Regex("""/page/(\d+)""").find(baseUrl)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                ?: Regex("""[?&]page=(\d+)""").find(baseUrl)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
+            val pageCount = doc.select("a[href*='/page/']").mapNotNull { Regex("""/page/(\d+)""").find(it.attr("href"))?.groupValues?.getOrNull(1)?.toIntOrNull() }.maxOrNull()
+                ?: doc.select("a[href*='page=']").mapNotNull { Regex("""[?&]page=(\d+)""").find(it.attr("href"))?.groupValues?.getOrNull(1)?.toIntOrNull() }.maxOrNull()
+                ?: page
+            return CatalogResult(items.toList(), page, pageCount.coerceAtLeast(page), items.size)
+        }
+        // Fallback to old selectors
         val selectors = listOf("article.g-block", "article", ".post", ".entry", ".g-block", ".listing-item")
         for (sel in selectors) {
             val nodes = doc.select(sel)
@@ -66,16 +93,6 @@ open class McpedlParser {
                 items += ModEntry(id = id, title = title, coverUrl = cover, pageUrl = href, category = category.name.lowercase(), typeId = category.typeId ?: 1, source = "mcpedl")
             }
             if (items.isNotEmpty()) break
-        }
-        if (items.isEmpty()) {
-            doc.select("a[href]").forEach { a ->
-                val href = normalizeUrl(a.absUrl("href").ifBlank { a.attr("href") }, baseUrl) ?: return@forEach
-                if (!isContentUrl(href)) return@forEach
-                val title = a.text().trim().takeIf { it.length > 5 } ?: return@forEach
-                if (title.equals("Download", true)) return@forEach
-                val id = href.trimEnd('/').substringAfterLast('/')
-                items += ModEntry(id = id, title = title, pageUrl = href, category = category.name.lowercase(), typeId = category.typeId ?: 1, source = "mcpedl")
-            }
         }
         val page = Regex("""[?&]page=(\d+)""").find(baseUrl)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
         val pageCount = doc.select("a[href*='page=']").mapNotNull { Regex("""[?&]page=(\d+)""").find(it.attr("href"))?.groupValues?.getOrNull(1)?.toIntOrNull() }.maxOrNull()?.coerceAtLeast(page) ?: page
