@@ -103,7 +103,7 @@ fun ChatScreen(container: AppContainer, onMessage: (String) -> Unit) {
                             inputText = ""
                         }
                     },
-                    enabled = inputText.isNotBlank() && state.agentEnabled,
+                    
                     shape = RoundedCornerShape(24.dp)
                 ) {
                     Icon(Icons.Default.Send, "Отправить")
