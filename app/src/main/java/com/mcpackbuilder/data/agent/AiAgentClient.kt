@@ -12,8 +12,12 @@ data class AiAgentConfig(
     val enabled: Boolean = false,
     val baseUrl: String = "",
     val apiKey: String = "",
-    val model: String = "default",
-    val timeout: Int = 60
+    val model: String = "",
+    val timeout: Int = 60,
+    val autoDownload: Boolean = true,
+    val autoFix: Boolean = true,
+    val recommend: Boolean = true,
+    val provider: String = "custom"
 )
 
 data class AiAgentResponse(
@@ -28,131 +32,116 @@ data class AiAgentResponse(
     val errors: List<String>?
 )
 
+data class ConnectionTestResult(val ok: Boolean, val detail: String)
+
+data class ChatTurn(val role: String, val content: String)
+
 class AiAgentClient(private val context: Context) {
-    
+
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
-    
-    suspend fun analyzeRequest(userQuery: String, selectedMods: List<ModEntry>): AiAgentResponse = withContext(Dispatchers.IO) {
+
+    private fun completionsUrl(baseUrl: String): String {
+        val base = baseUrl.trim().trimEnd('/')
+        return if (base.endsWith("/chat/completions")) base else "$base/chat/completions"
+    }
+
+    suspend fun testConnection(): ConnectionTestResult = withContext(Dispatchers.IO) {
         val config = loadConfig()
-        if (!config.enabled || config.baseUrl.isBlank()) {
-            return@withContext AiAgentResponse(
-                success = false,
-                message = "AI-агент не настроен. Добавьте API ключ в настройках.",
-                mods = null, conflicts = null, optimizations = null,
-                description = null, replacements = null, priorities = null, errors = null
-            )
+        if (config.baseUrl.isBlank()) return@withContext ConnectionTestResult(false, "Укажите Base URL")
+        if (config.apiKey.isBlank() && !isLocalHost(config.baseUrl)) {
+            return@withContext ConnectionTestResult(false, "Укажите API ключ")
         }
-        
+        if (config.model.isBlank()) return@withContext ConnectionTestResult(false, "Укажите модель")
         try {
-            val requestBody = buildJsonRequest(userQuery, selectedMods)
-            val response = sendRequest(config, requestBody)
-            parseResponse(response)
+            val body = buildJsonObject {
+                put("model", config.model)
+                put("messages", JsonArray(listOf(buildJsonObject {
+                    put("role", "user")
+                    put("content", "ping")
+                })))
+                put("max_tokens", 5)
+            }.toString()
+            val (code, text) = post(config, body)
+            when {
+                code in 200..299 -> ConnectionTestResult(true, "Подключено · HTTP $code")
+                code == 401 -> ConnectionTestResult(false, "Неверный API ключ (401)")
+                code == 404 -> ConnectionTestResult(false, "Модель или URL не найдены (404)")
+                code == 429 -> ConnectionTestResult(false, "Лимит запросов (429)")
+                else -> ConnectionTestResult(false, "HTTP $code: ${text.take(120)}")
+            }
         } catch (e: Exception) {
-            AiAgentResponse(
-                success = false,
-                message = "Ошибка соединения с AI-агентом: ${e.message}",
-                mods = null, conflicts = null, optimizations = null,
-                description = null, replacements = null, priorities = null, errors = null
-            )
+            ConnectionTestResult(false, "Ошибка сети: ${e.message ?: "неизвестно"}")
         }
     }
-    
-    suspend fun optimizeBuild(selectedMods: List<ModEntry>, buildErrors: List<String>): AiAgentResponse = withContext(Dispatchers.IO) {
+
+    private fun isLocalHost(url: String) =
+        url.contains("localhost") || url.contains("127.0.0.1") || url.contains("10.0.2.2") || url.contains("192.168.")
+
+    suspend fun chat(userMessage: String, history: List<ChatTurn>): AiAgentResponse = withContext(Dispatchers.IO) {
         val config = loadConfig()
-        if (!config.enabled || config.baseUrl.isBlank()) {
-            return@withContext AiAgentResponse(
-                success = false,
-                message = "AI-агент не настроен",
-                mods = null, conflicts = null, optimizations = null,
-                description = null, replacements = null, priorities = null, errors = null
-            )
+        if (config.baseUrl.isBlank() || config.model.isBlank()) {
+            return@withContext fail("AI-агент не настроен. Укажите Base URL и модель в настройках.")
         }
-        
+        if (config.apiKey.isBlank() && !isLocalHost(config.baseUrl)) {
+            return@withContext fail("Не указан API ключ. Добавьте его в настройках AI-агента.")
+        }
         try {
-            val requestBody = buildOptimizeRequest(selectedMods, buildErrors)
-            val response = sendRequest(config, requestBody)
-            parseResponse(response)
+            val messages = JsonArray(buildList {
+                add(buildJsonObject {
+                    put("role", "system")
+                    put("content", SYSTEM_PROMPT)
+                })
+                history.takeLast(12).forEach { turn ->
+                    add(buildJsonObject {
+                        put("role", turn.role)
+                        put("content", turn.content)
+                    })
+                }
+                add(buildJsonObject {
+                    put("role", "user")
+                    put("content", userMessage)
+                })
+            })
+            val body = buildJsonObject {
+                put("model", config.model)
+                put("messages", messages)
+                put("temperature", 0.6)
+            }.toString()
+            val (code, text) = post(config, body)
+            if (code !in 200..299) return@withContext fail("HTTP $code: ${text.take(160)}")
+            val content = json.parseToJsonElement(text).jsonObject["choices"]?.jsonArray
+                ?.firstOrNull()?.jsonObject?.get("message")?.jsonObject?.get("content")?.jsonPrimitive?.contentOrNull
+                ?: return@withContext fail("Пустой ответ модели")
+            AiAgentResponse(true, content.trim(), null, null, null, null, null, null, null)
         } catch (e: Exception) {
-            AiAgentResponse(
-                success = false,
-                message = "Ошибка оптимизации: ${e.message}",
-                mods = null, conflicts = null, optimizations = null,
-                description = null, replacements = null, priorities = null, errors = null
-            )
+            fail("Ошибка запроса: ${e.message ?: "неизвестно"}")
         }
     }
-    
-    private fun buildJsonRequest(query: String, mods: List<ModEntry>): String {
-        val modsArray = JsonArray(mods.map { m ->
-            buildJsonObject {
-                put("title", m.title)
-                put("category", m.category ?: "")
-                put("page_url", m.pageUrl)
-            }
-        })
-        return buildJsonObject {
-            put("action", "analyze_request")
-            put("query", query)
-            put("selected_mods", modsArray)
-        }.toString()
-    }
-    
-    private fun buildOptimizeRequest(mods: List<ModEntry>, errors: List<String>): String {
-        val modsArray = JsonArray(mods.map { m ->
-            buildJsonObject {
-                put("title", m.title)
-                put("file_path", m.filePath ?: "")
-            }
-        })
-        val errorsArray = JsonArray(errors.map { JsonPrimitive(it) })
-        return buildJsonObject {
-            put("action", "optimize_build")
-            put("mods", modsArray)
-            put("errors", errorsArray)
-        }.toString()
-    }
-    
-    private fun sendRequest(config: AiAgentConfig, requestBody: String): String {
-        val url = URL("${config.baseUrl}/api/v1/agent")
+
+    suspend fun analyzeRequest(userQuery: String, selectedMods: List<ModEntry>): AiAgentResponse =
+        chat(userQuery, emptyList())
+
+    private fun fail(msg: String) = AiAgentResponse(false, msg, null, null, null, null, null, null, null)
+
+    private fun post(config: AiAgentConfig, body: String): Pair<Int, String> {
+        val url = URL(completionsUrl(config.baseUrl))
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "POST"
         conn.connectTimeout = config.timeout * 1000
         conn.readTimeout = config.timeout * 1000
         conn.setRequestProperty("Content-Type", "application/json")
-        conn.setRequestProperty("Authorization", "Bearer ${config.apiKey}")
+        conn.setRequestProperty("Accept", "application/json")
+        if (config.apiKey.isNotBlank()) {
+            conn.setRequestProperty("Authorization", "Bearer ${config.apiKey}")
+        }
         conn.doOutput = true
-        conn.outputStream.use { it.write(requestBody.toByteArray()) }
-        
-        val responseCode = conn.responseCode
-        val inputStream = if (responseCode == 200) conn.inputStream else conn.errorStream
-        return inputStream.use { it.bufferedReader().readText() }
+        conn.outputStream.use { it.write(body.toByteArray()) }
+        val code = conn.responseCode
+        val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+        val text = stream?.use { it.bufferedReader().readText() } ?: ""
+        return code to text
     }
-    
-    private fun parseResponse(jsonStr: String): AiAgentResponse {
-        val element = json.parseToJsonElement(jsonStr)
-        val jsonObj = element.jsonObject
-        return AiAgentResponse(
-            success = jsonObj["success"]?.jsonPrimitive?.boolean ?: false,
-            message = jsonObj["message"]?.jsonPrimitive?.contentOrNull,
-            mods = jsonObj["mods"]?.jsonArray?.mapNotNull { el ->
-                val obj = el.jsonObject
-                val title = obj["title"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
-                ModEntry(
-                    id = obj["id"]?.jsonPrimitive?.content ?: title,
-                    title = title,
-                    pageUrl = obj["page_url"]?.jsonPrimitive?.content ?: "",
-                    category = obj["category"]?.jsonPrimitive?.contentOrNull
-                )
-            },
-            conflicts = jsonObj["conflicts"]?.jsonArray?.map { it.jsonPrimitive.content },
-            optimizations = jsonObj["optimizations"]?.jsonArray?.map { it.jsonPrimitive.content },
-            description = jsonObj["description"]?.jsonPrimitive?.contentOrNull,
-            replacements = jsonObj["replacements"]?.jsonObject?.mapValues { it.value.jsonPrimitive.content },
-            priorities = jsonObj["priorities"]?.jsonArray?.map { it.jsonPrimitive.content },
-            errors = jsonObj["errors"]?.jsonArray?.map { it.jsonPrimitive.content }
-        )
-    }
-    
+
     fun saveConfig(config: AiAgentConfig) {
         val prefs = context.getSharedPreferences("ai_agent", Context.MODE_PRIVATE)
         prefs.edit().apply {
@@ -161,18 +150,33 @@ class AiAgentClient(private val context: Context) {
             putString("api_key", config.apiKey)
             putString("model", config.model)
             putInt("timeout", config.timeout)
+            putBoolean("auto_download", config.autoDownload)
+            putBoolean("auto_fix", config.autoFix)
+            putBoolean("recommend", config.recommend)
+            putString("provider", config.provider)
             apply()
         }
     }
-    
+
     fun loadConfig(): AiAgentConfig {
         val prefs = context.getSharedPreferences("ai_agent", Context.MODE_PRIVATE)
         return AiAgentConfig(
             enabled = prefs.getBoolean("enabled", false),
             baseUrl = prefs.getString("base_url", "") ?: "",
             apiKey = prefs.getString("api_key", "") ?: "",
-            model = prefs.getString("model", "default") ?: "default",
-            timeout = prefs.getInt("timeout", 60)
+            model = prefs.getString("model", "") ?: "",
+            timeout = prefs.getInt("timeout", 60),
+            autoDownload = prefs.getBoolean("auto_download", true),
+            autoFix = prefs.getBoolean("auto_fix", true),
+            recommend = prefs.getBoolean("recommend", true),
+            provider = prefs.getString("provider", "custom") ?: "custom"
         )
+    }
+
+    companion object {
+        const val SYSTEM_PROMPT =
+            "Ты — AI-ассистент приложения MCPack Builder для Minecraft Bedrock. " +
+            "Помогаешь подбирать аддоны, текстуры, шейдеры и карты, объясняешь как собрать сборку, " +
+            "разрешать конфликты и оптимизировать паки. Отвечай кратко, по делу, на русском языке."
     }
 }

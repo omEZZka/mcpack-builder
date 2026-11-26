@@ -8,14 +8,13 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -39,14 +38,20 @@ fun ChatScreen(container: AppContainer, onMessage: (String) -> Unit) {
     }
     
     Column(Modifier.fillMaxSize()) {
+        LaunchedEffect(Unit) { viewModel.refreshStatus() }
         Surface(shadowElevation = 4.dp, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
-                Text("AI Ассистент", style = MaterialTheme.typography.headlineSmall)
-                Text(
-                    if (state.agentEnabled) "Онлайн" else "Не подключен (настройте в настройках)",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (state.agentEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                )
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("AI Ассистент", style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        if (state.agentEnabled) "Онлайн" else "Не подключен (настройте в настройках)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (state.agentEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                    )
+                }
+                IconButton(onClick = { viewModel.clearChat() }) {
+                    Icon(Icons.Default.Delete, "Очистить чат")
+                }
             }
         }
         
@@ -57,13 +62,11 @@ fun ChatScreen(container: AppContainer, onMessage: (String) -> Unit) {
         ) {
             if (state.messages.isEmpty()) {
                 item {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("🤖", style = MaterialTheme.typography.displayMedium)
-                            Spacer(Modifier.height(8.dp))
-                            Text("Начните чат с AI-агентом", style = MaterialTheme.typography.bodyLarge)
-                            Text("Попросите подобрать моды или исправить конфликты", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
+                    Column(Modifier.fillMaxWidth().padding(top = 48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("🤖", style = MaterialTheme.typography.displayMedium)
+                        Spacer(Modifier.height(8.dp))
+                        Text("Начните чат с AI-агентом", style = MaterialTheme.typography.bodyLarge)
+                        Text("Попросите подобрать моды или исправить конфликты", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -73,11 +76,10 @@ fun ChatScreen(container: AppContainer, onMessage: (String) -> Unit) {
             if (state.isTyping) {
                 item {
                     Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
-                        Row(Modifier.padding(12.dp)) {
-                            repeat(3) {
-                                Box(Modifier.size(8.dp).background(MaterialTheme.colorScheme.onSurfaceVariant, RoundedCornerShape(4.dp)))
-                                Spacer(Modifier.width(4.dp))
-                            }
+                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Печатает…", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }

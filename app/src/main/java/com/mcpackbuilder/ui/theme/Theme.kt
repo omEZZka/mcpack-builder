@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import androidx.compose.ui.unit.sp
 import kotlin.math.abs
 
@@ -244,95 +245,180 @@ private fun AppearanceSettingsTab(theme: ThemeSettings) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AiAgentSettingsTab(context: android.content.Context) {
     val s = LocalStrings.current
     val agent = remember { com.mcpackbuilder.data.agent.AiAgentClient(context) }
     var config by remember { mutableStateOf(agent.loadConfig()) }
+    val scope = rememberCoroutineScope()
     var testing by remember { mutableStateOf(false) }
-    var connected by remember { mutableStateOf(false) }
-    
+    var testResult by remember { mutableStateOf<com.mcpackbuilder.data.agent.ConnectionTestResult?>(null) }
+    var showKey by remember { mutableStateOf(false) }
+
+    fun save(new: com.mcpackbuilder.data.agent.AiAgentConfig) {
+        config = new
+        agent.saveConfig(new)
+    }
+
+    val presets = listOf(
+        Triple("OpenAI", "https://api.openai.com/v1", "gpt-4o-mini"),
+        Triple("OpenRouter", "https://openrouter.ai/api/v1", "openai/gpt-4o-mini"),
+        Triple("Groq", "https://api.groq.com/openai/v1", "llama-3.3-70b-versatile"),
+        Triple("DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat"),
+        Triple("Ollama (local)", "http://192.168.1.10:11434/v1", "llama3.1"),
+        Triple("Custom", "", "")
+    )
+
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
             Text("AI Агент", style = MaterialTheme.typography.headlineMedium)
-            Text(s.aiAgentHint, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "Подключите любой OpenAI-совместимый сервер. Агент помогает собирать сборки и отвечает в чате.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
-        
+
         item {
-            SettingsCard(title = "Подключение", subtitle = "Настройки API сервера") {
+            SettingsCard(title = "Провайдер", subtitle = "Быстрый выбор сервера") {
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    presets.forEach { (name, url, model) ->
+                        FilterChip(
+                            selected = config.provider == name,
+                            onClick = {
+                                if (name == "Custom") save(config.copy(provider = name))
+                                else save(config.copy(provider = name, baseUrl = url, model = model))
+                                testResult = null
+                            },
+                            label = { Text(name) }
+                        )
+                    }
+                }
+            }
+        }
+
+        item {
+            SettingsCard(title = "Подключение", subtitle = "Base URL, ключ и модель") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(config.enabled, { 
-                        config = config.copy(enabled = it)
-                        agent.saveConfig(config)
-                    })
-                    Spacer(Modifier.width(8.dp))
-                    Text(s.aiAgentEnabled, style = MaterialTheme.typography.titleMedium)
+                    Switch(checked = config.enabled, onCheckedChange = { save(config.copy(enabled = it)) })
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text("Включить AI-агента", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            if (config.enabled) "Агент активен" else "Агент выключен",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 Spacer(Modifier.height(16.dp))
                 OutlinedTextField(
                     value = config.baseUrl,
-                    onValueChange = { config = config.copy(baseUrl = it); agent.saveConfig(config) },
-                    label = { Text(s.aiAgentBaseUrl) },
+                    onValueChange = { save(config.copy(baseUrl = it)) },
+                    label = { Text("Base URL") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = config.enabled,
-                    placeholder = { Text("https://api.example.com") }
+                    placeholder = { Text("https://api.openai.com/v1") },
+                    supportingText = { Text("Без /chat/completions — добавится автоматически") }
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = config.apiKey,
-                    onValueChange = { config = config.copy(apiKey = it); agent.saveConfig(config) },
-                    label = { Text(s.aiAgentApiKey) },
+                    onValueChange = { save(config.copy(apiKey = it)) },
+                    label = { Text("API ключ") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = config.enabled
+                    visualTransformation = if (showKey) androidx.compose.ui.text.input.VisualTransformation.None
+                        else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    trailingIcon = {
+                        TextButton(onClick = { showKey = !showKey }) {
+                            Text(if (showKey) "Скрыть" else "Показать", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = config.model,
-                    onValueChange = { config = config.copy(model = it); agent.saveConfig(config) },
-                    label = { Text(s.aiAgentModel) },
+                    onValueChange = { save(config.copy(model = it)) },
+                    label = { Text("Модель") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = config.enabled,
-                    placeholder = { Text("gpt-4, llama, etc.") }
+                    placeholder = { Text("gpt-4o-mini") }
                 )
             }
         }
-        
+
         item {
-            SettingsCard(title = "Функции", subtitle = "Возможности AI") {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    listOf(
-                        "Авто-скачивание модов" to "Загрузка всех модов при сборке",
-                        "Исправление конфликтов" to "Разрешение коллизий файлов",
-                        "Рекомендации модов" to "Подбор совместимых аддонов"
-                    ).forEach { (title, desc) ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(true, {})
-                            Spacer(Modifier.width(8.dp))
-                            Column {
-                                Text(title, style = MaterialTheme.typography.bodyMedium)
-                                Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
+            SettingsCard(title = "Проверка соединения", subtitle = "Реальный запрос к серверу") {
+                Button(
+                    onClick = {
+                        testing = true
+                        testResult = null
+                        scope.launch {
+                            testResult = agent.testConnection()
+                            testing = false
                         }
+                    },
+                    enabled = !testing && config.baseUrl.isNotBlank() && config.model.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (testing) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                    } else {
+                        Icon(Icons.Default.Check, null, Modifier.size(16.dp))
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (testing) "Проверка…" else "Проверить соединение")
+                }
+                testResult?.let { r ->
+                    Spacer(Modifier.height(12.dp))
+                    Surface(
+                        color = if (r.ok) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer,
+                        shape = MaterialTheme.shapes.small,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            (if (r.ok) "✓ " else "✗ ") + r.detail,
+                            modifier = Modifier.padding(12.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (r.ok) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
+                        )
                     }
                 }
             }
         }
-        
+
         item {
-            SettingsCard(title = "Тест", subtitle = "Проверка соединения") {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(
-                        onClick = { testing = true; connected = config.baseUrl.isNotEmpty(); testing = false },
-                        enabled = config.enabled && config.baseUrl.isNotEmpty()
-                    ) {
-                        Icon(if (testing) Icons.Default.Refresh else Icons.Default.Check, null, Modifier.size(16.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(s.aiAgentTest)
+            SettingsCard(title = "Возможности", subtitle = "Что делает агент") {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Switch(checked = config.autoDownload, onCheckedChange = { save(config.copy(autoDownload = it)) })
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text("Авто-скачивание", style = MaterialTheme.typography.bodyMedium)
+                            Text("Скачивать все моды при сборке", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
-                    if (connected) Text("✓ Подключено", color = MaterialTheme.colorScheme.primary)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Switch(checked = config.autoFix, onCheckedChange = { save(config.copy(autoFix = it)) })
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text("Исправление конфликтов", style = MaterialTheme.typography.bodyMedium)
+                            Text("Разрешать коллизии файлов", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Switch(checked = config.recommend, onCheckedChange = { save(config.copy(recommend = it)) })
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text("Рекомендации", style = MaterialTheme.typography.bodyMedium)
+                            Text("Подбор совместимых аддонов", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 }
             }
         }
