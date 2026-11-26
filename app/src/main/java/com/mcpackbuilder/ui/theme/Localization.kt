@@ -152,19 +152,20 @@ data class AppStrings(
     fun tag(t: com.mcpackbuilder.domain.model.CatalogTag): String = when (t) {
         com.mcpackbuilder.domain.model.CatalogTag.ALL -> tagAll
         com.mcpackbuilder.domain.model.CatalogTag.HORROR -> tagHorror
-        com.mcpackbuilder.domain.model.CatalogTag.PVP -> tagPvp
-        com.mcpackbuilder.domain.model.CatalogTag.SURVIVAL -> tagSurvival
-        com.mcpackbuilder.domain.model.CatalogTag.ADVENTURE -> tagAdventure
         com.mcpackbuilder.domain.model.CatalogTag.RPG -> tagRpg
         com.mcpackbuilder.domain.model.CatalogTag.FURNITURE -> tagFurniture
         com.mcpackbuilder.domain.model.CatalogTag.ANIMALS -> tagAnimals
-        com.mcpackbuilder.domain.model.CatalogTag.WEAPONS -> tagWeapons
+        com.mcpackbuilder.domain.model.CatalogTag.GUNS -> tagWeapons
         com.mcpackbuilder.domain.model.CatalogTag.CARS -> tagCars
         com.mcpackbuilder.domain.model.CatalogTag.MAGIC -> tagMagic
         com.mcpackbuilder.domain.model.CatalogTag.REALISTIC -> tagRealistic
         com.mcpackbuilder.domain.model.CatalogTag.PARKOUR -> tagParkour
         com.mcpackbuilder.domain.model.CatalogTag.CITY -> tagCity
         com.mcpackbuilder.domain.model.CatalogTag.ANIME -> tagAnime
+        com.mcpackbuilder.domain.model.CatalogTag.PVP -> tagPvp
+        com.mcpackbuilder.domain.model.CatalogTag.SURVIVAL -> tagSurvival
+        com.mcpackbuilder.domain.model.CatalogTag.ADVENTURE -> tagAdventure
+        com.mcpackbuilder.domain.model.CatalogTag.WEAPONS -> tagWeapons
     }
 }
 

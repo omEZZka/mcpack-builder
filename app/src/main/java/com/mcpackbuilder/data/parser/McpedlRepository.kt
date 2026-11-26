@@ -32,11 +32,7 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
         val trimmed = query.trim()
         if (trimmed.isBlank() && tag != CatalogTag.ALL) {
             val base = "https://mcpedl.com/tag/${tag.mcpedlSlug}/"
-            val pageUrl = buildString {
-                append(base)
-                append("?type_id=${category.typeId ?: 1}&platform_id=2")
-                if (page > 1) append("&page=$page")
-            }
+            val pageUrl = if (page > 1) "${base.trimEnd('/')}/page/$page/" else base
             val doc = fetcher.getDocument(pageUrl)
             return parser.parseCatalog(doc.html, doc.finalUrl, category)
         }
@@ -60,11 +56,7 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
 
     private suspend fun mcpehubCatalog(query: String, category: ModCategory, page: Int, tag: CatalogTag): CatalogResult {
         val trimmed = query.trim()
-        val base = if (trimmed.isBlank() && tag != CatalogTag.ALL) {
-            "https://mcpehub.org/tag/${tag.mcpehubSlug}/"
-        } else {
-            category.mcpehubUrl
-        }
+        val base = category.mcpehubUrl
         val url = if (trimmed.isBlank()) {
             if (page <= 1) base else "${base.trimEnd('/')}/page/$page/"
         } else {

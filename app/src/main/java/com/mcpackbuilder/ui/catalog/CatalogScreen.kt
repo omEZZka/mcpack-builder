@@ -44,11 +44,10 @@ fun CatalogScreen(container: AppContainer, onMessage: (String) -> Unit, onOpenBu
     LaunchedEffect(state.message) {
         val msg = state.message ?: return@LaunchedEffect
         when {
-            msg.startsWith("add:") -> onMessage(s.addedToBuild(msg.removePrefix("add:")))
-            msg.startsWith("exists:") -> onMessage(s.alreadyInBuild(msg.removePrefix("exists:")))
             msg.startsWith("map-saved:") -> onMessage(s.mapSavedToBuilds)
             msg.startsWith("map-error:") -> onMessage(s.mapDownloadFailed(msg.removePrefix("map-error:")))
             msg.startsWith("downloading:") -> onMessage(s.downloadingArchive)
+            else -> {} // Silent for add:/exists: to avoid spam
         }
         viewModel.consumeMessage()
     }

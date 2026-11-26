@@ -75,20 +75,21 @@ enum class CatalogSource {
     MCPEDL, MCPEHUB
 }
 
-enum class CatalogTag(val mcpedlSlug: String, val mcpehubSlug: String) {
+enum class CatalogTag(val mcpedlSlug: String, val mcpehubSlug: String, val label: String = "") {
     ALL("", ""),
-    HORROR("horror", "horror"),
-    PVP("pvp", "pvp"),
-    SURVIVAL("survival", "survival"),
-    ADVENTURE("adventure", "adventure"),
-    RPG("rpg", "rpg"),
-    FURNITURE("furniture", "furniture"),
-    ANIMALS("animals", "animals"),
-    WEAPONS("guns", "weapons"),
-    CARS("cars", "cars"),
-    MAGIC("magic", "magic"),
-    REALISTIC("realistic", "realistic"),
-    PARKOUR("parkour", "parkour"),
-    CITY("city", "city"),
-    ANIME("anime", "anime")
+    HORROR("horror", ""),
+    RPG("rpg", ""),
+    FURNITURE("furniture", ""),
+    ANIMALS("animals", ""),
+    GUNS("guns", ""),
+    CARS("cars", ""),
+    MAGIC("magic", ""),
+    REALISTIC("realistic", ""),
+    PARKOUR("parkour", ""),
+    CITY("city", ""),
+    ANIME("anime", ""),
+    PVP("pvp", ""),
+    SURVIVAL("survival", ""),
+    ADVENTURE("adventure", ""),
+    WEAPONS("weapons", ""),
 }
