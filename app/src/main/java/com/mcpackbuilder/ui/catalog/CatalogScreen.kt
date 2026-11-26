@@ -65,13 +65,14 @@ fun CatalogScreen(container: AppContainer, onMessage: (String) -> Unit, onOpenBu
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     label = { Text(s.searchMods) },
-                    trailingIcon = { 
-                        IconButton({ viewModel.load(true) }) { Icon(Icons.Default.Search, s.search) }
+                    trailingIcon = {
+                        IconButton(onClick = { viewModel.load(true) }) {
+                            Icon(Icons.Default.Search, contentDescription = s.search)
+                        }
                     },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { viewModel.load(true) }),
-                    shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier.fillMaxWidth()
+                    shape = MaterialTheme.shapes.medium
                 )
             }
         }
