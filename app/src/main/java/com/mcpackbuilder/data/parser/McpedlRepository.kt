@@ -3,6 +3,7 @@ package com.mcpackbuilder.data.parser
 import com.mcpackbuilder.data.web.WebFetcher
 import com.mcpackbuilder.domain.model.CatalogSort
 import com.mcpackbuilder.domain.model.CatalogSource
+import com.mcpackbuilder.domain.model.CatalogTag
 import com.mcpackbuilder.domain.model.ModCategory
 import com.mcpackbuilder.domain.model.ModEntry
 import java.io.IOException
@@ -16,19 +17,29 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
     private val listingCache = ConcurrentHashMap<String, CatalogResult>()
     private val pageParser = object : McpedlParser() {} // reuse logic; we extend below via helpers
 
-    suspend fun catalog(query: String, category: ModCategory, page: Int, sort: CatalogSort, source: CatalogSource = CatalogSource.MCPEDL): CatalogResult {
-        val key = "${source.name}|${category.name}|${sort.name}|${page}|${query.trim().lowercase()}"
+    suspend fun catalog(query: String, category: ModCategory, page: Int, sort: CatalogSort, source: CatalogSource = CatalogSource.MCPEDL, tag: CatalogTag = CatalogTag.ALL): CatalogResult {
+        val key = "${source.name}|${category.name}|${sort.name}|${tag.name}|${page}|${query.trim().lowercase()}"
         listingCache[key]?.let { return it }
         val result = when (source) {
-            CatalogSource.MCPEDL -> mcpedlCatalog(query, category, page, sort)
-            CatalogSource.MCPEHUB -> mcpehubCatalog(query, category, page)
+            CatalogSource.MCPEDL -> mcpedlCatalog(query, category, page, sort, tag)
+            CatalogSource.MCPEHUB -> mcpehubCatalog(query, category, page, tag)
         }
         if (result.items.isNotEmpty()) listingCache[key] = result
         return result
     }
 
-    private suspend fun mcpedlCatalog(query: String, category: ModCategory, page: Int, sort: CatalogSort): CatalogResult {
+    private suspend fun mcpedlCatalog(query: String, category: ModCategory, page: Int, sort: CatalogSort, tag: CatalogTag): CatalogResult {
         val trimmed = query.trim()
+        if (trimmed.isBlank() && tag != CatalogTag.ALL) {
+            val base = "https://mcpedl.com/tag/${tag.mcpedlSlug}/"
+            val pageUrl = buildString {
+                append(base)
+                append("?type_id=${category.typeId ?: 1}&platform_id=2")
+                if (page > 1) append("&page=$page")
+            }
+            val doc = fetcher.getDocument(pageUrl)
+            return parser.parseCatalog(doc.html, doc.finalUrl, category)
+        }
         return if (trimmed.isBlank()) {
             val apiUrl = "https://mcpedl.com/api/list?type_id=${category.typeId ?: 1}&sort=${sort.api}&order=desc&limit=20&page=$page&platform_id=2"
             val doc = fetcher.getDocument(apiUrl)
@@ -47,11 +58,15 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
         }
     }
 
-    private suspend fun mcpehubCatalog(query: String, category: ModCategory, page: Int): CatalogResult {
+    private suspend fun mcpehubCatalog(query: String, category: ModCategory, page: Int, tag: CatalogTag): CatalogResult {
         val trimmed = query.trim()
-        val base = category.mcpehubUrl
+        val base = if (trimmed.isBlank() && tag != CatalogTag.ALL) {
+            "https://mcpehub.org/tag/${tag.mcpehubSlug}/"
+        } else {
+            category.mcpehubUrl
+        }
         val url = if (trimmed.isBlank()) {
-            if (page <= 1) base else "$base/page/$page/"
+            if (page <= 1) base else "${base.trimEnd('/')}/page/$page/"
         } else {
             val q = java.net.URLEncoder.encode(trimmed, "UTF-8")
             if (page <= 1) "https://mcpehub.org/?s=$q" else "https://mcpehub.org/page/$page/?s=$q"

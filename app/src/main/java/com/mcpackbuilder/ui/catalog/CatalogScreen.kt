@@ -24,6 +24,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mcpackbuilder.AppContainer
 import com.mcpackbuilder.domain.model.CatalogSort
 import com.mcpackbuilder.domain.model.CatalogSource
+import com.mcpackbuilder.domain.model.CatalogTag
 import com.mcpackbuilder.domain.model.ModCategory
 import com.mcpackbuilder.domain.model.ModEntry
 import com.mcpackbuilder.ui.components.CoverImage
@@ -75,6 +76,12 @@ fun CatalogScreen(container: AppContainer, onMessage: (String) -> Unit, onOpenBu
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             CatalogSort.entries.forEach { sort ->
                 FilterChip(selected = state.sort == sort, onClick = { viewModel.setSort(sort) }, label = { Text(s.sort(sort)) })
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CatalogTag.entries.forEach { tag ->
+                FilterChip(selected = state.tag == tag, onClick = { viewModel.setTag(tag) }, label = { Text(s.tag(tag)) })
             }
         }
         Spacer(Modifier.height(6.dp))

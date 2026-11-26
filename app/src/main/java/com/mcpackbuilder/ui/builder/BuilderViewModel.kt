@@ -24,6 +24,7 @@ data class BuilderUiState(
     val icon: File? = null,
     val mods: List<ModEntry> = emptyList(),
     val buildName: String = "Моя сборка",
+    val format: String = "mcaddon",
     val building: Boolean = false,
     val progress: Int = 0,
     val stage: String = "",
@@ -33,7 +34,8 @@ data class BuilderUiState(
     val error: String? = null,
     val message: String? = null,
     val downloadingModId: String? = null,
-    val downloadStatus: String? = null
+    val downloadStatus: String? = null,
+    val exportRequested: Boolean = false
 )
 
 class BuilderViewModel(private val container: AppContainer) : ViewModel() {
@@ -62,9 +64,16 @@ class BuilderViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    fun setBuildName(name: String) {
-        _state.update { it.copy(buildName = name) }
+    fun setBuildName(name: String) { _state.update { it.copy(buildName = name) } }
+    fun setPackName(name: String) = setBuildName(name)
+    fun setFormat(fmt: String) { _state.update { it.copy(format = fmt) } }
+    fun requestExport(): Boolean {
+        val s = _state.value
+        if (s.mods.isEmpty() || s.building) return false
+        _state.update { it.copy(exportRequested = true) }
+        return true
     }
+    fun clearMessage() { _state.update { it.copy(message = null) } }
     fun setIcon(file: File?) {
         val previous = _state.value.icon
         _state.update { it.copy(icon = file) }
@@ -72,12 +81,27 @@ class BuilderViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun remove(id: String) = container.selection.remove(id)
-
+    fun move(from: Int, to: Int) {
+        val mods = container.selection.mods.value
+        if (from !in mods.indices || to !in mods.indices) return
+        val id = mods[from].id
+        container.selection.move(id, to - from)
+    }
     fun moveUp(id: String) = container.selection.move(id, -1)
-
     fun moveDown(id: String) = container.selection.move(id, 1)
-
     fun clearAll() = container.selection.clear()
+
+    fun importFromUri(uri: android.net.Uri) {
+        viewModelScope.launch {
+            _state.update { it.copy(message = null, error = null) }
+            runCatching { com.mcpackbuilder.data.store.DevicePacks.read(container.app, uri) }
+                .onSuccess { mods ->
+                    val added = container.selection.addAll(mods)
+                    _state.update { it.copy(message = "Добавлено паков: $added") }
+                }
+                .onFailure { e -> _state.update { it.copy(error = e.message ?: "Ошибка импорта") } }
+        }
+    }
 
     fun download(mod: ModEntry) {
         if (_state.value.downloadingModId != null) return

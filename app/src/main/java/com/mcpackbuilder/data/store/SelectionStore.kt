@@ -26,6 +26,20 @@ class SelectionStore(context: Context) {
     }
 
     @Synchronized
+    fun addAll(mods: List<ModEntry>): Int {
+        val current = _mods.value.toMutableList()
+        var added = 0
+        mods.forEach { mod ->
+            if (current.none { it.pageUrl == mod.pageUrl || it.id == mod.id }) {
+                current.add(mod)
+                added++
+            }
+        }
+        if (added > 0) update(current)
+        return added
+    }
+
+    @Synchronized
     fun remove(id: String) {
         update(_mods.value.filterNot { it.id == id })
     }

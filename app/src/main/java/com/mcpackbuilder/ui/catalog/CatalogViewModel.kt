@@ -10,6 +10,7 @@ import com.mcpackbuilder.data.download.MapImporter
 import com.mcpackbuilder.data.parser.McpedlRepository
 import com.mcpackbuilder.domain.model.CatalogSort
 import com.mcpackbuilder.domain.model.CatalogSource
+import com.mcpackbuilder.domain.model.CatalogTag
 import com.mcpackbuilder.domain.model.ModCategory
 import com.mcpackbuilder.domain.model.ModEntry
 import kotlinx.coroutines.CancellationException
@@ -25,6 +26,7 @@ data class CatalogUiState(
     val source: CatalogSource = CatalogSource.MCPEDL,
     val query: String = "",
     val category: ModCategory = ModCategory.MODS,
+    val tag: CatalogTag = CatalogTag.ALL,
     val items: List<ModEntry> = emptyList(),
     val page: Int = 1,
     val pageCount: Int = 1,
@@ -57,6 +59,7 @@ class CatalogViewModel(private val container: AppContainer) : ViewModel() {
     fun setSort(s: CatalogSort) { _state.update { it.copy(sort = s) }; load(true) }
     fun setSource(src: CatalogSource) { _state.update { it.copy(source = src) }; load(true) }
     fun setCategory(c: ModCategory) { _state.update { it.copy(category = c) }; load(true) }
+    fun setTag(t: CatalogTag) { _state.update { it.copy(tag = t) }; load(true) }
     fun consumeMessage() { _state.update { it.copy(message = null) } }
 
     fun addToBuild(mod: ModEntry) {
@@ -86,7 +89,7 @@ class CatalogViewModel(private val container: AppContainer) : ViewModel() {
         loadJob = viewModelScope.launch {
             _state.update { it.copy(loading = refresh || !it.loaded, loadingMore = !refresh && it.loaded, error = null, page = nextPage) }
             try {
-                val result = repo.catalog(_state.value.query, _state.value.category, nextPage, _state.value.sort, _state.value.source)
+                val result = repo.catalog(_state.value.query, _state.value.category, nextPage, _state.value.sort, _state.value.source, _state.value.tag)
                 _state.update {
                     val merged = if (refresh) result.items else (it.items + result.items).distinctBy { m -> m.pageUrl }
                     it.copy(items = merged, page = result.page, pageCount = result.pageCount, total = result.total, loading = false, loadingMore = false, loaded = true, error = null)
@@ -105,7 +108,7 @@ class CatalogViewModel(private val container: AppContainer) : ViewModel() {
         loadJob = viewModelScope.launch {
             _state.update { it.copy(loadingMore = true, error = null) }
             try {
-                val result = repo.catalog(s.query, s.category, s.page + 1, s.sort, s.source)
+                val result = repo.catalog(s.query, s.category, s.page + 1, s.sort, s.source, s.tag)
                 _state.update {
                     val merged = (it.items + result.items).distinctBy { m -> m.pageUrl }
                     it.copy(items = merged, page = result.page, pageCount = result.pageCount, total = result.total, loadingMore = false, loaded = true)

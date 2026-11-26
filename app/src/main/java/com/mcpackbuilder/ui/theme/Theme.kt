@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -148,6 +149,50 @@ fun MCPackTheme(themeSettings: ThemeSettings? = null, content: @Composable () ->
 
 @Composable
 fun ThemeScreen(theme: ThemeSettings) {
+    SettingsScreen(theme)
+}
+
+@Composable
+fun SettingsScreen(theme: ThemeSettings) {
+    val s = LocalStrings.current
+    var tab by remember { mutableIntStateOf(0) }
+    val tabs = listOf(s.settingsGeneral, s.settingsAppearance, s.settingsAbout)
+    Column(Modifier.fillMaxSize()) {
+        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(s.navSettings, style = MaterialTheme.typography.headlineMedium)
+            ScrollableTabRow(selectedTabIndex = tab, edgePadding = 0.dp, containerColor = Color.Transparent, divider = {}) {
+                tabs.forEachIndexed { i, label ->
+                    Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label, maxLines = 1) })
+                }
+            }
+        }
+        when (tab) {
+            0 -> GeneralSettingsTab(theme)
+            1 -> AppearanceSettingsTab(theme)
+            2 -> AboutSettingsTab()
+        }
+    }
+}
+
+@Composable
+private fun GeneralSettingsTab(theme: ThemeSettings) {
+    val s = LocalStrings.current
+    val settings by theme.state
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item {
+            SettingsCard(title = s.language, subtitle = s.generalSubtitle) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AppLanguage.entries.forEach { lang ->
+                        FilterChip(selected = settings.language == lang.code, onClick = { theme.setLanguage(lang.code) }, label = { Text(lang.nativeName) })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppearanceSettingsTab(theme: ThemeSettings) {
     val s = LocalStrings.current
     val settings by theme.state
     val current = AllPalettes.getOrElse(settings.paletteIndex) { AllPalettes.first() }
@@ -160,15 +205,7 @@ fun ThemeScreen(theme: ThemeSettings) {
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(s.navSettings, style = MaterialTheme.typography.headlineMedium)
-                SettingsCard(title = s.language, subtitle = s.languageHint) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        AppLanguage.entries.forEach { lang ->
-                            FilterChip(selected = settings.language == lang.code, onClick = { theme.setLanguage(lang.code) }, label = { Text(lang.nativeName) })
-                        }
-                    }
-                }
-                SettingsCard(title = s.appearance, subtitle = s.paletteHint) {
+                SettingsCard(title = s.appearance, subtitle = s.appearanceSubtitle) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(selected = !current.dark, onClick = { theme.setPalette(AllPalettes.indexOfFirst { !it.dark }.coerceAtLeast(0)) }, label = { Text(s.light) })
                         FilterChip(selected = current.dark, onClick = { theme.setPalette(AllPalettes.indexOfFirst { it.dark }.coerceAtLeast(0)) }, label = { Text(s.dark) })
@@ -203,9 +240,23 @@ fun ThemeScreen(theme: ThemeSettings) {
 }
 
 @Composable
+private fun AboutSettingsTab() {
+    val s = LocalStrings.current
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item {
+            SettingsCard(title = s.appName, subtitle = s.aboutSubtitle) {
+                Text(s.appDescription, style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(4.dp))
+                Text("${s.version}: 1.0", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
 private fun SettingsCard(title: String, subtitle: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             content()

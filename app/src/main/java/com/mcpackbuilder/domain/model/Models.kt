@@ -74,3 +74,21 @@ enum class CatalogSort(val api: String) {
 enum class CatalogSource {
     MCPEDL, MCPEHUB
 }
+
+enum class CatalogTag(val mcpedlSlug: String, val mcpehubSlug: String) {
+    ALL("", ""),
+    HORROR("horror", "horror"),
+    PVP("pvp", "pvp"),
+    SURVIVAL("survival", "survival"),
+    ADVENTURE("adventure", "adventure"),
+    RPG("rpg", "rpg"),
+    FURNITURE("furniture", "furniture"),
+    ANIMALS("animals", "animals"),
+    WEAPONS("guns", "weapons"),
+    CARS("cars", "cars"),
+    MAGIC("magic", "magic"),
+    REALISTIC("realistic", "realistic"),
+    PARKOUR("parkour", "parkour"),
+    CITY("city", "city"),
+    ANIME("anime", "anime")
+}

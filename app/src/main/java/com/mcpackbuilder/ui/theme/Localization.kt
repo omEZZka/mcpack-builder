@@ -96,6 +96,45 @@ data class AppStrings(
     val addedToBuild: (String) -> String,
     val alreadyInBuild: (String) -> String,
     val pickIcon: String,
+    val tagAll: String,
+    val tagHorror: String,
+    val tagPvp: String,
+    val tagSurvival: String,
+    val tagAdventure: String,
+    val tagRpg: String,
+    val tagFurniture: String,
+    val tagAnimals: String,
+    val tagWeapons: String,
+    val tagCars: String,
+    val tagMagic: String,
+    val tagRealistic: String,
+    val tagParkour: String,
+    val tagCity: String,
+    val tagAnime: String,
+    val tags: String,
+    val settingsAppearance: String,
+    val settingsGeneral: String,
+    val settingsAbout: String,
+    val appearanceSubtitle: String,
+    val generalSubtitle: String,
+    val aboutSubtitle: String,
+    val version: String,
+    val appDescription: String,
+    val buildMods: String,
+    val packName: String,
+    val format: String,
+    val fromFolder: String,
+    val installed: String,
+    val clearSelection: String,
+    val modsCount: (Int) -> String,
+    val deviceAccessTitle: String,
+    val deviceAccessBody: String,
+    val pickFolder: String,
+    val buildConfirmTitle: (Int) -> String,
+    val buildConfirmBody: String,
+    val localFiles: String,
+    val build: String,
+    val addFromDevice: String,
 ) {
     fun category(c: ModCategory): String = when (c) {
         ModCategory.MODS -> categoryMods
@@ -109,6 +148,23 @@ data class AppStrings(
         CatalogSort.TODAY -> sortToday
         CatalogSort.WEEK -> sortWeek
         CatalogSort.MONTH -> sortMonth
+    }
+    fun tag(t: com.mcpackbuilder.domain.model.CatalogTag): String = when (t) {
+        com.mcpackbuilder.domain.model.CatalogTag.ALL -> tagAll
+        com.mcpackbuilder.domain.model.CatalogTag.HORROR -> tagHorror
+        com.mcpackbuilder.domain.model.CatalogTag.PVP -> tagPvp
+        com.mcpackbuilder.domain.model.CatalogTag.SURVIVAL -> tagSurvival
+        com.mcpackbuilder.domain.model.CatalogTag.ADVENTURE -> tagAdventure
+        com.mcpackbuilder.domain.model.CatalogTag.RPG -> tagRpg
+        com.mcpackbuilder.domain.model.CatalogTag.FURNITURE -> tagFurniture
+        com.mcpackbuilder.domain.model.CatalogTag.ANIMALS -> tagAnimals
+        com.mcpackbuilder.domain.model.CatalogTag.WEAPONS -> tagWeapons
+        com.mcpackbuilder.domain.model.CatalogTag.CARS -> tagCars
+        com.mcpackbuilder.domain.model.CatalogTag.MAGIC -> tagMagic
+        com.mcpackbuilder.domain.model.CatalogTag.REALISTIC -> tagRealistic
+        com.mcpackbuilder.domain.model.CatalogTag.PARKOUR -> tagParkour
+        com.mcpackbuilder.domain.model.CatalogTag.CITY -> tagCity
+        com.mcpackbuilder.domain.model.CatalogTag.ANIME -> tagAnime
     }
 }
 
@@ -198,6 +254,45 @@ val RussianStrings = AppStrings(
     addedToBuild = { "«$it» добавлен в сборку" },
     alreadyInBuild = { "«$it» уже в сборке" },
     pickIcon = "Выбрать иконку",
+    tagAll = "Все",
+    tagHorror = "Хоррор",
+    tagPvp = "PVP",
+    tagSurvival = "Выживание",
+    tagAdventure = "Приключения",
+    tagRpg = "RPG",
+    tagFurniture = "Мебель",
+    tagAnimals = "Животные",
+    tagWeapons = "Оружие",
+    tagCars = "Машины",
+    tagMagic = "Магия",
+    tagRealistic = "Реализм",
+    tagParkour = "Паркур",
+    tagCity = "Город",
+    tagAnime = "Аниме",
+    tags = "Теги",
+    settingsAppearance = "Оформление",
+    settingsGeneral = "Общие",
+    settingsAbout = "О приложении",
+    appearanceSubtitle = "Тема, цвета и стиль интерфейса",
+    generalSubtitle = "Язык и основные параметры",
+    aboutSubtitle = "Информация о MCPack Builder",
+    version = "Версия",
+    appDescription = "Сборщик аддонов, текстур, шейдеров и карт для Minecraft Bedrock.",
+    buildMods = "Сборка модов",
+    packName = "Имя пака",
+    format = "Формат",
+    fromFolder = "Из папки",
+    installed = "Установленные",
+    clearSelection = "Очистить выбор",
+    modsCount = { "Моды: $it" },
+    deviceAccessTitle = "Доступ к данным Minecraft",
+    deviceAccessBody = "Будет открыт системный выбор папки. Выберите /Android/data/com.mojang.minecraftpe/files/games/com.mojang/ или папку behavior_packs/resource_packs, чтобы импортировать установленные паки в сборку.",
+    pickFolder = "Выбрать папку",
+    buildConfirmTitle = { "Собрать $it модов?" },
+    buildConfirmBody = "Пакеты будут загружены при необходимости и объединены в один файл.",
+    localFiles = "Локальные файлы",
+    build = "Собрать",
+    addFromDevice = "Добавьте моды из каталога или с устройства",
 )
 
 val EnglishStrings = AppStrings(
@@ -286,6 +381,45 @@ val EnglishStrings = AppStrings(
     addedToBuild = { "\"$it\" added to build" },
     alreadyInBuild = { "\"$it\" already in build" },
     pickIcon = "Pick icon",
+    tagAll = "All",
+    tagHorror = "Horror",
+    tagPvp = "PVP",
+    tagSurvival = "Survival",
+    tagAdventure = "Adventure",
+    tagRpg = "RPG",
+    tagFurniture = "Furniture",
+    tagAnimals = "Animals",
+    tagWeapons = "Weapons",
+    tagCars = "Cars",
+    tagMagic = "Magic",
+    tagRealistic = "Realistic",
+    tagParkour = "Parkour",
+    tagCity = "City",
+    tagAnime = "Anime",
+    tags = "Tags",
+    settingsAppearance = "Appearance",
+    settingsGeneral = "General",
+    settingsAbout = "About",
+    appearanceSubtitle = "Theme, colors and interface style",
+    generalSubtitle = "Language and basic options",
+    aboutSubtitle = "Information about MCPack Builder",
+    version = "Version",
+    appDescription = "Builder for Minecraft Bedrock addons, textures, shaders and maps.",
+    buildMods = "Build mods",
+    packName = "Pack name",
+    format = "Format",
+    fromFolder = "From folder",
+    installed = "Installed",
+    clearSelection = "Clear selection",
+    modsCount = { "Mods: $it" },
+    deviceAccessTitle = "Minecraft data access",
+    deviceAccessBody = "System folder picker will open. Select /Android/data/com.mojang.minecraftpe/files/games/com.mojang/ or behavior_packs/resource_packs to import installed packs.",
+    pickFolder = "Pick folder",
+    buildConfirmTitle = { "Build $it mods?" },
+    buildConfirmBody = "Packages will be downloaded if needed and merged into one file.",
+    localFiles = "Local files",
+    build = "Build",
+    addFromDevice = "Add mods from catalog or from device",
 )
 
 fun stringsFor(language: AppLanguage): AppStrings = when (language) {
