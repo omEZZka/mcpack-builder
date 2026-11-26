@@ -40,8 +40,6 @@ class ChatViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             try {
                 val config = aiClient.loadConfig()
-                // Simulate AI response (replace with actual API call)
-                val config = aiClient.loadConfig()
                 val response = if (config.enabled && config.baseUrl.isNotEmpty() && config.apiKey.isNotEmpty()) {
                     // Real API call
                     try {
