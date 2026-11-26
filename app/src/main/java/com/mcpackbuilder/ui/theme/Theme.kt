@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.PasswordVisualTransformation
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 
@@ -273,7 +272,7 @@ private fun AiAgentSettingsTab(context: android.content.Context) {
                     config = config.copy(apiKey = it)
                     agent.saveConfig(config)
                 }, label = { Text(s.aiAgentApiKey) }, singleLine = true, modifier = Modifier.fillMaxWidth(), 
-                    enabled = config.enabled, visualTransformation = PasswordVisualTransformation())
+                    enabled = config.enabled, )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(config.model, { 
                     config = config.copy(model = it)

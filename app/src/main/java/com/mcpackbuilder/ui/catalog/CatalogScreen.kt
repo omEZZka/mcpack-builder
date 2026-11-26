@@ -187,7 +187,7 @@ private fun ModCard(mod: ModEntry, added: Boolean, onAdd: () -> Unit) {
                 url = mod.coverUrl, 
                 modifier = Modifier
                     .size(100.dp)
-                    .then(Modifier.clip(MaterialTheme.shapes.medium)),
+                    ,
                 contentDescription = mod.title
             )
             Spacer(Modifier.width(14.dp))
