@@ -86,6 +86,7 @@ class CatalogViewModel(private val container: AppContainer) : ViewModel() {
         loadJob?.cancel()
         val current = _state.value
         val nextPage = if (refresh) 1 else current.page
+        
         loadJob = viewModelScope.launch {
             _state.update { 
                 it.copy(
@@ -96,14 +97,21 @@ class CatalogViewModel(private val container: AppContainer) : ViewModel() {
                     items = if (refresh) emptyList() else it.items
                 ) 
             }
+            
             try {
-                // For ALL tag or non-empty query, don't pass tag filter
-                val useTag = current.tag != CatalogTag.ALL && current.query.trim().isEmpty()
-                val result = if (useTag) {
-                    repo.catalog(current.query, current.category, nextPage, current.sort, current.source, current.tag)
-                } else {
-                    repo.catalog(current.query, current.category, nextPage, current.sort, current.source, CatalogTag.ALL)
-                }
+                // Build cache key with all filters
+                val cacheKey = "${current.source}|${current.category}|${current.sort}|${current.tag}|$nextPage|${current.query}"
+                
+                // Call repository with all parameters
+                val result = repo.catalog(
+                    query = current.query,
+                    category = current.category,
+                    page = nextPage,
+                    sort = current.sort,
+                    source = current.source,
+                    tag = current.tag
+                )
+                
                 _state.update {
                     val merged = if (refresh) result.items else (it.items + result.items).distinctBy { m -> m.pageUrl }
                     it.copy(
@@ -114,11 +122,12 @@ class CatalogViewModel(private val container: AppContainer) : ViewModel() {
                         loading = false, 
                         loadingMore = false, 
                         loaded = true, 
-                        error = if (merged.isEmpty() && current.tag != CatalogTag.ALL) "По тегу '${current.tag.name}' ничего не найдено" else null
+                        error = if (merged.isEmpty() && result.total == 0) "Ничего не найдено" else null
                     )
                 }
-            } catch (e: CancellationException) { throw e }
-            catch (e: Exception) {
+            } catch (e: CancellationException) { 
+                throw e 
+            } catch (e: Exception) {
                 _state.update { 
                     it.copy(
                         loading = false, 
