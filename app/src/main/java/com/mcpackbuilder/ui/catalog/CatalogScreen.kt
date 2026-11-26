@@ -3,6 +3,7 @@ package com.mcpackbuilder.ui.catalog
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -85,8 +86,7 @@ fun CatalogScreen(container: AppContainer, onMessage: (String) -> Unit, onOpenBu
                     FilterChip(
                         selected = state.category == cat, 
                         onClick = { viewModel.setCategory(cat) }, 
-                        label = { Text(s.category(cat)) },
-                        leadingIcon = if (state.category == cat) { Icon(Icons.Default.Check, null, Modifier.size(14.dp)) } else null
+                        label = { Text(s.category(cat)) }
                     )
                 }
                 Spacer(Modifier.width(8.dp))

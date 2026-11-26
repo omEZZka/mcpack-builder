@@ -8,6 +8,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.text.PasswordVisualTransformation
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
@@ -282,7 +285,11 @@ private fun AiAgentSettingsTab(context: android.content.Context) {
                         connected = config.baseUrl.isNotEmpty() && config.apiKey.isNotEmpty()
                         testing = false
                     }, enabled = config.enabled && config.baseUrl.isNotEmpty()) {
-                        if (testing) CircularProgressIndicator(Modifier.size(16.dp)) else Icon(Icons.Default.Check, null, Modifier.size(16.dp))
+                        if (testing) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Default.Check, null, Modifier.size(16.dp))
+                        }
                         Spacer(Modifier.width(4.dp))
                         Text(s.aiAgentTest)
                     }
