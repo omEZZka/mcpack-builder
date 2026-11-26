@@ -97,9 +97,13 @@ class CatalogViewModel(private val container: AppContainer) : ViewModel() {
                 ) 
             }
             try {
-                // Only pass tag if it's not ALL - API doesn't support ALL tag
-                val tagToUse = if (current.tag != CatalogTag.ALL && current.query.trim().isEmpty()) current.tag else CatalogTag.ALL
-                val result = repo.catalog(current.query, current.category, nextPage, current.sort, current.source, tagToUse)
+                // For ALL tag or non-empty query, don't pass tag filter
+                val useTag = current.tag != CatalogTag.ALL && current.query.trim().isEmpty()
+                val result = if (useTag) {
+                    repo.catalog(current.query, current.category, nextPage, current.sort, current.source, current.tag)
+                } else {
+                    repo.catalog(current.query, current.category, nextPage, current.sort, current.source, CatalogTag.ALL)
+                }
                 _state.update {
                     val merged = if (refresh) result.items else (it.items + result.items).distinctBy { m -> m.pageUrl }
                     it.copy(
