@@ -44,7 +44,7 @@ class AiAgentClient(private val context: Context) {
         }
         
         try {
-            val requestBody = buildJsonRequest(userQuery, selectedMods, config)
+            val requestBody = buildJsonRequest(userQuery, selectedMods)
             val response = sendRequest(config, requestBody)
             parseResponse(response)
         } catch (e: Exception) {
@@ -69,7 +69,7 @@ class AiAgentClient(private val context: Context) {
         }
         
         try {
-            val requestBody = buildOptimizeRequest(selectedMods, buildErrors, config)
+            val requestBody = buildOptimizeRequest(selectedMods, buildErrors)
             val response = sendRequest(config, requestBody)
             parseResponse(response)
         } catch (e: Exception) {
@@ -82,34 +82,33 @@ class AiAgentClient(private val context: Context) {
         }
     }
     
-    private fun buildJsonRequest(query: String, mods: List<ModEntry>, config: AiAgentConfig): String {
-        return Json.buildObject {
+    private fun buildJsonRequest(query: String, mods: List<ModEntry>): String {
+        val modsArray = JsonArray(mods.map { m ->
+            buildJsonObject {
+                put("title", m.title)
+                put("category", m.category ?: "")
+                put("page_url", m.pageUrl)
+            }
+        })
+        return buildJsonObject {
             put("action", "analyze_request")
             put("query", query)
-            put("selected_mods", Json.buildArray {
-                mods.forEach { m ->
-                    add(Json.buildObject {
-                        put("title", m.title)
-                        put("category", m.category ?: "")
-                        put("page_url", m.pageUrl)
-                    })
-                }
-            })
+            put("selected_mods", modsArray)
         }.toString()
     }
     
-    private fun buildOptimizeRequest(mods: List<ModEntry>, errors: List<String>, config: AiAgentConfig): String {
-        return Json.buildObject {
+    private fun buildOptimizeRequest(mods: List<ModEntry>, errors: List<String>): String {
+        val modsArray = JsonArray(mods.map { m ->
+            buildJsonObject {
+                put("title", m.title)
+                put("file_path", m.filePath ?: "")
+            }
+        })
+        val errorsArray = JsonArray(errors.map { JsonPrimitive(it) })
+        return buildJsonObject {
             put("action", "optimize_build")
-            put("mods", Json.buildArray {
-                mods.forEach { m ->
-                    add(Json.buildObject {
-                        put("title", m.title)
-                        put("file_path", m.filePath ?: "")
-                    })
-                }
-            })
-            put("errors", Json.buildArray { errors.forEach { add(it) } })
+            put("mods", modsArray)
+            put("errors", errorsArray)
         }.toString()
     }
     
@@ -130,7 +129,8 @@ class AiAgentClient(private val context: Context) {
     }
     
     private fun parseResponse(jsonStr: String): AiAgentResponse {
-        val jsonObj = json.parseToJsonElement(jsonStr).jsonObject
+        val element = json.parseToJsonElement(jsonStr)
+        val jsonObj = element.jsonObject
         return AiAgentResponse(
             success = jsonObj["success"]?.jsonPrimitive?.boolean ?: false,
             message = jsonObj["message"]?.jsonPrimitive?.contentOrNull,
