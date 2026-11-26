@@ -40,26 +40,32 @@ class ChatViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             try {
                 val config = aiClient.loadConfig()
-                val response = if (config.enabled && config.baseUrl.isNotEmpty() && config.apiKey.isNotEmpty()) {
-                    // Real API call
+                // Check if API is properly configured
+                val apiConfigured = config.enabled && config.baseUrl.isNotEmpty() && config.apiKey.isNotEmpty()
+                
+                val response = if (apiConfigured) {
+                    // Try real API call
                     try {
                         val result = aiClient.analyzeRequest(text, emptyList())
-                        if (result.success) {
-                            result.message ?: "Запрос обработан успешно"
+                        if (result.success && result.message != null) {
+                            result.message
+                        } else if (result.mods != null && result.mods.isNotEmpty()) {
+                            "Найдено модов: ${result.mods.size}. Перейдите в каталог для просмотра."
+                        } else if (result.conflicts != null && result.conflicts.isNotEmpty()) {
+                            "Обнаружено конфликтов: ${result.conflicts.size}"
+                        } else if (result.description != null) {
+                            result.description
                         } else {
-                            result.message ?: "Ошибка обработки запроса"
+                            // Fallback to smart responses based on query
+                            getSmartResponse(text)
                         }
                     } catch (e: Exception) {
-                        "Ошибка API: ${e.message}"
+                        // API call failed, use smart responses
+                        getSmartResponse(text)
                     }
                 } else {
-                    when {
-                        text.contains("привет", ignoreCase = true) -> "Здравствуйте! Готов помочь с подбором модов."
-                        text.contains("сборк", ignoreCase = true) -> "Для создания сборки выберите моды в каталоге и перейдите на вкладку Сборка."
-                        text.contains("конфликт", ignoreCase = true) -> "Конфликты модов можно исправить в настройках AI-агента."
-                        text.contains("скач", ignoreCase = true) -> "Нажмите кнопку 'Скачать все моды' в разделе Сборка."
-                        else -> "Настройте API ключ в настройках для полноценной работы AI-агента."
-                    }
+                    // API not configured, use smart responses
+                    getSmartResponse(text)
                 }
                 
                 kotlinx.coroutines.delay(1000) // Simulate typing
@@ -72,6 +78,22 @@ class ChatViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
     
+    private fun getSmartResponse(text: String): String {
+        val lower = text.lowercase()
+        return when {
+            lower.contains("привет") || lower.contains("здравствуй") -> "Привет! Я AI-ассистент MCPack Builder. Могу помочь подобрать моды, исправить конфликты или оптимизировать сборку."
+            lower.contains("пока") || lower.contains("до свидания") -> "Всего доброго! Обращайтесь ещё."
+            lower.contains("сборк") || lower.contains("собрать") || lower.contains("создать") -> "Для создания сборки: 1) Добавьте моды в каталоге 2) Перейдите во вкладку 'Сборка' 3) Нажмите 'Скачать все моды' 4) Нажмите 'Собрать'"
+            lower.contains("конфликт") || lower.contains("ошибк") -> "Конфликты модов возникают при одинаковых именах файлов. AI может автоматически разрешить их. Включите опцию в настройках AI-агента."
+            lower.contains("скач") || lower.contains("загруз") -> "В разделе 'Сборка' есть кнопка 'Скачать все моды'. Она автоматически загрузит все выбранные аддоны."
+            lower.contains("тег") || lower.contains("фильтр") -> "Используйте фильтры в каталоге: категории, теги, сортировка. Тег 'Все' показывает весь список модов."
+            lower.contains("мод") && (lower.contains("найди") || lower.contains("подбери") || lower.contains("искать")) -> "Перейдите в каталог, выберите категорию и тег. Например: 'Моды' + 'Хоррор' для хоррор-модов."
+            lower.contains("спасиб") -> "Пожалуйста! Всегда рад помочь."
+            lower.contains("как") && lower.contains("дела") -> "У меня всё отлично! Готов помогать вам с модами для Minecraft."
+            else -> "Понял: '$text'. Для полноценной работы настройте API ключ AI-агента в настройках приложения."
+        }
+    }
+
     private fun addMessage(text: String, isUser: Boolean) {
         _state.update { 
             it.copy(messages = it.messages + ChatMessage(text, isUser))
