@@ -61,7 +61,7 @@ fun AppRoot(container: AppContainer) {
             composable(Routes.CATALOG) { CatalogScreen(container, showMessage) { nav.navigate(Routes.BUILDER) { popUpTo(nav.graph.findStartDestination().id) { saveState = true }; launchSingleTop = true; restoreState = true } } }
             composable(Routes.BUILDER) { BuilderScreen(container, showMessage) }
             composable(Routes.LIBRARY) { LibraryScreen(container, showMessage) }
-            composable(Routes.SETTINGS) { ThemeScreen(container.theme) }
+            composable(Routes.SETTINGS) { ThemeScreen(container.theme, container.app) }
         }
     }
 }

@@ -35,12 +35,15 @@ data class BuilderUiState(
     val message: String? = null,
     val downloadingModId: String? = null,
     val downloadStatus: String? = null,
-    val exportRequested: Boolean = false
+    val exportRequested: Boolean = false,
+    val autoDownloading: Boolean = false,
+    val aiSuggestions: List<String> = emptyList()
 )
 
 class BuilderViewModel(private val container: AppContainer) : ViewModel() {
 
     private val repository = McpedlRepository(container.parser, container.fetcher)
+    private val aiClient = com.mcpackbuilder.data.agent.AiAgentClient(container.app)
     private val _state = MutableStateFlow(BuilderUiState())
     val state: StateFlow<BuilderUiState> = _state.asStateFlow()
 
@@ -162,6 +165,12 @@ class BuilderViewModel(private val container: AppContainer) : ViewModel() {
             _state.update { it.copy(message = "Добавьте хотя бы один мод") }
             return
         }
+        // Auto-download mods if AI agent is enabled
+        val config = aiClient.loadConfig()
+        if (config.enabled && mods.any { !it.isDownloaded }) {
+            downloadAllMods()
+            return
+        }
         if (mods.any { !it.isDownloaded }) {
             _state.update { it.copy(message = "Сначала скачайте все моды (кнопка «Скачать»)") }
             return
@@ -228,6 +237,52 @@ class BuilderViewModel(private val container: AppContainer) : ViewModel() {
                         message = null
                     )
                 }
+            }
+        }
+    }
+
+    private fun downloadAllMods() {
+        if (_state.value.autoDownloading) return
+        _state.update { it.copy(autoDownloading = true, downloadStatus = "Авто-скачивание модов...") }
+        
+        viewModelScope.launch {
+            val modsToDownload = _state.value.mods.filter { !it.isDownloaded }
+            var successCount = 0
+            var failCount = 0
+            
+            modsToDownload.forEach { mod ->
+                try {
+                    _state.update { it.copy(downloadingModId = mod.id) }
+                    val enriched = repository.enrich(mod)
+                    container.selection.updateMod(mod.id) { current ->
+                        enriched.copy(id = current.id, filePath = current.filePath)
+                    }
+                    val direct = repository.directDownload(enriched.downloadLinks)
+                    if (direct != null) {
+                        val file = FileDownloader.download(container.app, direct, null, null, null)
+                        container.downloads.add(file.absolutePath, direct, mod.id)
+                        container.selection.attachFile(mod.id, file.absolutePath)
+                        successCount++
+                    } else {
+                        failCount++
+                    }
+                } catch (e: Exception) {
+                    failCount++
+                }
+            }
+            
+            _state.update { 
+                it.copy(
+                    autoDownloading = false,
+                    downloadingModId = null,
+                    downloadStatus = null,
+                    message = "Скачано: $successCount, Ошибок: $failCount"
+                )
+            }
+            
+            // Retry build if all downloads succeeded
+            if (failCount == 0) {
+                build()
             }
         }
     }

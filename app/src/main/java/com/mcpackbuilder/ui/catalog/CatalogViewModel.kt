@@ -87,16 +87,42 @@ class CatalogViewModel(private val container: AppContainer) : ViewModel() {
         val current = _state.value
         val nextPage = if (refresh) 1 else current.page
         loadJob = viewModelScope.launch {
-            _state.update { it.copy(loading = refresh || !it.loaded, loadingMore = !refresh && it.loaded, error = null, page = nextPage) }
+            _state.update { 
+                it.copy(
+                    loading = refresh || !it.loaded, 
+                    loadingMore = !refresh && it.loaded, 
+                    error = null, 
+                    page = nextPage,
+                    items = if (refresh) emptyList() else it.items  // Clear items on refresh
+                ) 
+            }
             try {
-                val result = repo.catalog(_state.value.query, _state.value.category, nextPage, _state.value.sort, _state.value.source, _state.value.tag)
+                // Use ALL tag if query is empty and tag is ALL
+                val tagToUse = if (current.query.trim().isEmpty()) current.tag else CatalogTag.ALL
+                val result = repo.catalog(current.query, current.category, nextPage, current.sort, current.source, tagToUse)
                 _state.update {
                     val merged = if (refresh) result.items else (it.items + result.items).distinctBy { m -> m.pageUrl }
-                    it.copy(items = merged, page = result.page, pageCount = result.pageCount, total = result.total, loading = false, loadingMore = false, loaded = true, error = null)
+                    it.copy(
+                        items = merged, 
+                        page = result.page, 
+                        pageCount = result.pageCount, 
+                        total = result.total, 
+                        loading = false, 
+                        loadingMore = false, 
+                        loaded = true, 
+                        error = null
+                    )
                 }
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
-                _state.update { it.copy(loading = false, loadingMore = false, loaded = true, error = e.message ?: "error") }
+                _state.update { 
+                    it.copy(
+                        loading = false, 
+                        loadingMore = false, 
+                        loaded = true, 
+                        error = e.message ?: "Ошибка загрузки каталога"
+                    ) 
+                }
             }
         }
     }

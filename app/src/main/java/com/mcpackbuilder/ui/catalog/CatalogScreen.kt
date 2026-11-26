@@ -52,45 +52,95 @@ fun CatalogScreen(container: AppContainer, onMessage: (String) -> Unit, onOpenBu
         viewModel.consumeMessage()
     }
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
-        SectionHeader(s.catalogTitle, s.catalogSubtitle)
-        Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
-            value = state.query,
-            onValueChange = viewModel::setQuery,
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            label = { Text(s.searchMods) },
-            trailingIcon = { IconButton({ viewModel.load(true) }) { Icon(Icons.Default.Search, s.search) } },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { viewModel.load(true) })
-        )
-        Spacer(Modifier.height(8.dp))
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ModCategory.entries.forEach { cat ->
-                FilterChip(selected = state.category == cat, onClick = { viewModel.setCategory(cat) }, label = { Text(s.category(cat)) })
+    Column(Modifier.fillMaxSize()) {
+        // Header with search
+        Surface(shadowElevation = 4.dp, modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(s.catalogTitle, style = MaterialTheme.typography.headlineMedium)
+                Text(s.catalogSubtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(
+                    value = state.query,
+                    onValueChange = viewModel::setQuery,
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text(s.searchMods) },
+                    trailingIcon = { 
+                        IconButton({ viewModel.load(true) }) { Icon(Icons.Default.Search, s.search) }
+                    },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { viewModel.load(true) }),
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
-        Spacer(Modifier.height(6.dp))
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CatalogSort.entries.forEach { sort ->
-                FilterChip(selected = state.sort == sort, onClick = { viewModel.setSort(sort) }, label = { Text(s.sort(sort)) })
+        
+        // Scrollable filters
+        Column(Modifier.padding(vertical = 8.dp)) {
+            // Categories
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Spacer(Modifier.width(8.dp))
+                Text("Категории:", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(end = 8.dp))
+                ModCategory.entries.forEach { cat ->
+                    FilterChip(
+                        selected = state.category == cat, 
+                        onClick = { viewModel.setCategory(cat) }, 
+                        label = { Text(s.category(cat)) },
+                        leadingIcon = if (state.category == cat) { Icon(Icons.Default.Check, null, Modifier.size(14.dp)) } else null
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+            }
+            Spacer(Modifier.height(6.dp))
+            // Sort
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Spacer(Modifier.width(8.dp))
+                Text("Сортировка:", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(end = 8.dp))
+                CatalogSort.entries.forEach { sort ->
+                    FilterChip(
+                        selected = state.sort == sort, 
+                        onClick = { viewModel.setSort(sort) }, 
+                        label = { Text(s.sort(sort)) }
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+            }
+            Spacer(Modifier.height(6.dp))
+            // Tags
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Spacer(Modifier.width(8.dp))
+                Text("Теги:", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(end = 8.dp))
+                CatalogTag.entries.forEach { tag ->
+                    FilterChip(
+                        selected = state.tag == tag, 
+                        onClick = { viewModel.setTag(tag) }, 
+                        label = { Text(s.tag(tag)) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+            }
+            Spacer(Modifier.height(6.dp))
+            // Source
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.width(8.dp))
+                Text(s.source + ":", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(end = 8.dp))
+                CatalogSource.entries.forEach { src ->
+                    FilterChip(
+                        selected = state.source == src, 
+                        onClick = { viewModel.setSource(src) }, 
+                        label = { Text(if (src == CatalogSource.MCPEDL) "MCPEDL" else "mcpehub.org") }
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
             }
         }
-        Spacer(Modifier.height(6.dp))
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CatalogTag.entries.forEach { tag ->
-                FilterChip(selected = state.tag == tag, onClick = { viewModel.setTag(tag) }, label = { Text(s.tag(tag)) })
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(s.source, style = MaterialTheme.typography.labelLarge)
-            CatalogSource.entries.forEach { src ->
-                FilterChip(selected = state.source == src, onClick = { viewModel.setSource(src) }, label = { Text(if (src == CatalogSource.MCPEDL) "MCPEDL" else "mcpehub.org") })
-            }
-        }
-        Spacer(Modifier.height(8.dp))
+        
+        Divider()
+        Spacer(Modifier.height(4.dp))
 
         when {
             state.loading && state.items.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -118,30 +168,84 @@ fun CatalogScreen(container: AppContainer, onMessage: (String) -> Unit, onOpenBu
 @Composable
 private fun ModCard(mod: ModEntry, added: Boolean, onAdd: () -> Unit) {
     val s = LocalStrings.current
-    Card(Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(12.dp)) {
-            CoverImage(url = mod.coverUrl, modifier = Modifier.size(92.dp), contentDescription = mod.title)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(mod.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(4.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    mod.category?.let { SmallTag(it) }
+    ElevatedCard(
+        Modifier.fillMaxWidth(),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = if (added) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Row(Modifier.padding(14.dp)) {
+            // Cover image with rounded corners
+            CoverImage(
+                url = mod.coverUrl, 
+                modifier = Modifier
+                    .size(100.dp)
+                    .clip(MaterialTheme.shapes.medium),
+                contentDescription = mod.title
+            )
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    mod.title, 
+                    style = MaterialTheme.typography.titleMedium, 
+                    maxLines = 2, 
+                    overflow = TextOverflow.Ellipsis,
+                    color = if (added) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    mod.category?.let { 
+                        SmallTag(it)
+                    }
                     mod.version?.let { SmallTag(it) }
-                    mod.downloadCount?.let { SmallTag(formatCompact(it)) }
+                    mod.downloadCount?.let { 
+                        Surface(shape = MaterialTheme.shapes.extraSmall, color = MaterialTheme.colorScheme.secondaryContainer) {
+                            Text(
+                                text = formatCompact(it),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                 }
                 mod.author?.takeIf { it.isNotBlank() }?.let {
-                    Spacer(Modifier.height(4.dp))
-                    Text(s.author(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        s.author(it), 
+                        style = MaterialTheme.typography.bodySmall, 
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, 
+                        maxLines = 1, 
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
-                Spacer(Modifier.height(8.dp))
-                if (added) {
-                    AssistChip(onClick = {}, label = { Text(s.inBuild) }, leadingIcon = { Icon(Icons.Default.Check, null, Modifier.size(16.dp)) })
-                } else {
-                    Button(onClick = onAdd, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp), modifier = Modifier.height(34.dp)) {
-                        Icon(if (mod.typeId == 2) Icons.Default.Download else Icons.Default.Add, null, Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(if (mod.typeId == 2) s.downloadMap else s.add)
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (added) {
+                        AssistChip(
+                            onClick = {}, 
+                            label = { Text(s.inBuild, style = MaterialTheme.typography.labelMedium) }, 
+                            leadingIcon = { Icon(Icons.Default.Check, null, Modifier.size(16.dp)) },
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    } else {
+                        Button(
+                            onClick = onAdd, 
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier.height(38.dp),
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Icon(
+                                if (mod.typeId == 2) Icons.Default.Download else Icons.Default.Add, 
+                                null, 
+                                Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                if (mod.typeId == 2) s.downloadMap else s.add,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
                     }
                 }
             }

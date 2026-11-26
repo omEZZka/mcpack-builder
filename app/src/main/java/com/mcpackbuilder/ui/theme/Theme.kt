@@ -148,15 +148,15 @@ fun MCPackTheme(themeSettings: ThemeSettings? = null, content: @Composable () ->
 }
 
 @Composable
-fun ThemeScreen(theme: ThemeSettings) {
-    SettingsScreen(theme)
+fun ThemeScreen(theme: ThemeSettings, context: android.content.Context) {
+    SettingsScreen(theme, context)
 }
 
 @Composable
-fun SettingsScreen(theme: ThemeSettings) {
+fun SettingsScreen(theme: ThemeSettings, context: android.content.Context) {
     val s = LocalStrings.current
     var tab by remember { mutableIntStateOf(0) }
-    val tabs = listOf(s.settingsGeneral, s.settingsAppearance, s.settingsAbout)
+    val tabs = listOf(s.settingsGeneral, s.settingsAppearance, s.aiAgent, s.settingsAbout)
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(s.navSettings, style = MaterialTheme.typography.headlineMedium)
@@ -169,7 +169,8 @@ fun SettingsScreen(theme: ThemeSettings) {
         when (tab) {
             0 -> GeneralSettingsTab(theme)
             1 -> AppearanceSettingsTab(theme)
-            2 -> AboutSettingsTab()
+            2 -> AiAgentSettingsTab(context)
+            3 -> AboutSettingsTab()
         }
     }
 }
@@ -236,6 +237,61 @@ private fun AppearanceSettingsTab(theme: ThemeSettings) {
             }
         }
         item(span = { GridItemSpan(maxLineSpan) }) { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+@Composable
+private fun AiAgentSettingsTab(context: android.content.Context) {
+    val s = LocalStrings.current
+    val agent = remember { com.mcpackbuilder.data.agent.AiAgentClient(context) }
+    var config by remember { mutableStateOf(agent.loadConfig()) }
+    var testing by remember { mutableStateOf(false) }
+    var connected by remember { mutableStateOf(false) }
+    
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item {
+            SettingsCard(title = s.aiAgent, subtitle = s.aiAgentHint) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(config.enabled, { 
+                        config = config.copy(enabled = it)
+                        agent.saveConfig(config)
+                    })
+                    Spacer(Modifier.width(8.dp))
+                    Text(s.aiAgentEnabled)
+                }
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(config.baseUrl, { 
+                    config = config.copy(baseUrl = it)
+                    agent.saveConfig(config)
+                }, label = { Text(s.aiAgentBaseUrl) }, singleLine = true, modifier = Modifier.fillMaxWidth(), enabled = config.enabled)
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(config.apiKey, { 
+                    config = config.copy(apiKey = it)
+                    agent.saveConfig(config)
+                }, label = { Text(s.aiAgentApiKey) }, singleLine = true, modifier = Modifier.fillMaxWidth(), 
+                    enabled = config.enabled, visualTransformation = PasswordVisualTransformation())
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(config.model, { 
+                    config = config.copy(model = it)
+                    agent.saveConfig(config)
+                }, label = { Text(s.aiAgentModel) }, singleLine = true, modifier = Modifier.fillMaxWidth(), enabled = config.enabled)
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Button(onClick = { 
+                        testing = true
+                        connected = config.baseUrl.isNotEmpty() && config.apiKey.isNotEmpty()
+                        testing = false
+                    }, enabled = config.enabled && config.baseUrl.isNotEmpty()) {
+                        if (testing) CircularProgressIndicator(Modifier.size(16.dp)) else Icon(Icons.Default.Check, null, Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(s.aiAgentTest)
+                    }
+                    if (connected) {
+                        Text(s.aiAgentConnected, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+        }
     }
 }
 
