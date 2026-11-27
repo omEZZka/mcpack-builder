@@ -65,6 +65,7 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
             val desc = obj["summary"]?.jsonPrimitive?.contentOrNull
                 ?: obj["introduction"]?.jsonPrimitive?.contentOrNull
             val downloadCount = obj["downloadCount"]?.jsonPrimitive?.longOrNull
+            val rating = obj["average_rating"]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull()
             val published = obj["created_at"]?.jsonPrimitive?.contentOrNull ?: ""
             val typeId = obj["type_id"]?.jsonPrimitive?.intOrNull ?: (category.typeId ?: 1)
             ModEntry(
@@ -79,6 +80,7 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
                 downloadLinks = emptyList(),
                 typeId = typeId,
                 downloadCount = downloadCount,
+                rating = rating,
                 published = published,
                 source = "mcpedl"
             )
@@ -137,57 +139,55 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
         detailCache[entry.pageUrl]?.let { return it }
         if (entry.source == "mcpehub" || source == CatalogSource.MCPEHUB) {
             val doc = fetcher.getDocument(entry.pageUrl)
-            val detailed = parseMcpehubDetail(entry, doc.html, doc.finalUrl)
+            val smart = SmartParser.parseDetail(doc.html, doc.finalUrl, entry.title, entry.coverUrl)
+            val detailed = entry.copy(
+                title = smart.title ?: entry.title,
+                description = smart.description ?: entry.description,
+                coverUrl = smart.coverUrl ?: entry.coverUrl,
+                version = smart.version ?: entry.version,
+                downloadLinks = smart.downloadLinks.ifEmpty { entry.downloadLinks }
+            )
             detailCache[entry.pageUrl] = detailed
             return detailed
         }
-        // MCPEDL: use slug API
         val slug = entry.pageUrl.trimEnd('/').substringAfterLast('/')
-        return try {
+        var links = linkedSetOf<String>()
+        var title = entry.title
+        var desc = entry.description
+        // 1) API slug JSON
+        try {
             val jsonText = fetchJson("https://api.mcpedl.com/api/route/slug/$slug")
-            val data = Json { ignoreUnknownKeys = true; isLenient = true }.parseToJsonElement(jsonText).jsonObject["data"]?.jsonObject
-            val title = data?.get("title")?.jsonPrimitive?.contentOrNull ?: entry.title
-            val desc = data?.get("introduction")?.jsonPrimitive?.contentOrNull
-                ?: data?.get("summary")?.jsonPrimitive?.contentOrNull
-                ?: entry.description
-            val cover = entry.coverUrl
-            val links = linkedSetOf<String>()
+            val data = Json { ignoreUnknownKeys = true; isLenient = true }
+                .parseToJsonElement(jsonText).jsonObject["data"]?.jsonObject
+            title = data?.get("title")?.jsonPrimitive?.contentOrNull ?: title
+            desc = data?.get("introduction")?.jsonPrimitive?.contentOrNull
+                ?: data?.get("summary")?.jsonPrimitive?.contentOrNull ?: desc
             data?.get("downloads")?.jsonArray?.forEach { d ->
                 val url = d.jsonObject["file"]?.jsonPrimitive?.contentOrNull
                 if (url != null && hasArchiveExtension(url)) links += url
             }
-            // dedupe by url
-            val unique = links.distinct()
-            val detailed = entry.copy(
-                title = title,
-                description = desc ?: entry.description,
-                coverUrl = cover,
-                downloadLinks = if (unique.isNotEmpty()) unique else entry.downloadLinks
-            )
-            detailCache[entry.pageUrl] = detailed
-            detailed
-        } catch (e: Exception) {
-            detailCache[entry.pageUrl] = entry
-            entry
+            // страховка: сканируем весь JSON на архивные ссылки
+            if (links.isEmpty()) links += SmartParser.extractArchiveLinks(jsonText)
+        } catch (_: Exception) {
         }
-    }
-
-    private fun parseMcpehubDetail(entry: ModEntry, html: String, baseUrl: String): ModEntry {
-        val doc = org.jsoup.Jsoup.parse(html, baseUrl)
-        val title = doc.selectFirst("h1.entry-title, h1.post-title, h1")?.text()?.trim()?.takeIf { it.isNotBlank() } ?: entry.title
-        val desc = doc.selectFirst("meta[name=description]")?.attr("content")?.trim()?.takeIf { it.isNotBlank() }
-            ?: doc.selectFirst(".entry-content p, .post-content p, article p")?.text()?.trim()
-        val cover = doc.selectFirst("meta[property=og:image]")?.attr("content")?.let { abs(it, baseUrl) } ?: entry.coverUrl
-        val links = linkedSetOf<String>()
-        doc.select("a[href]").forEach { a ->
-            val href = abs(a.attr("href"), baseUrl) ?: return@forEach
-            val text = a.text().lowercase()
-            val lower = href.lowercase()
-            if (hasArchiveExtension(lower) || lower.contains("download") || lower.contains("file") || text.contains("download") || text.contains("скачать")) {
-                if (lower.startsWith("http")) links += href
+        // 2) HTML fallback через умный парсер
+        if (links.isEmpty()) {
+            try {
+                val doc = fetcher.getDocument(entry.pageUrl)
+                val smart = SmartParser.parseDetail(doc.html, doc.finalUrl, entry.title, entry.coverUrl)
+                if (smart.title != null) title = smart.title
+                if (smart.description != null) desc = smart.description
+                links += smart.downloadLinks
+            } catch (_: Exception) {
             }
         }
-        return entry.copy(title = title, description = desc ?: entry.description, coverUrl = cover, downloadLinks = if (links.isNotEmpty()) links.toList() else entry.downloadLinks)
+        val detailed = entry.copy(
+            title = title,
+            description = desc ?: entry.description,
+            downloadLinks = links.distinct().ifEmpty { entry.downloadLinks }
+        )
+        detailCache[entry.pageUrl] = detailed
+        return detailed
     }
 
     fun directDownload(urls: List<String>): String? = urls.firstOrNull { hasArchiveExtension(it) }

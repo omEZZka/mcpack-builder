@@ -60,11 +60,22 @@ fun ChatScreen(container: AppContainer, onMessage: (String) -> Unit) {
         ) {
             if (state.messages.isEmpty()) {
                 item {
-                    Column(Modifier.fillMaxWidth().padding(top = 48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(Modifier.fillMaxWidth().padding(top = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("🤖", style = MaterialTheme.typography.displayMedium)
                         Spacer(Modifier.height(8.dp))
                         Text("Начните чат с AI-агентом", style = MaterialTheme.typography.bodyLarge)
                         Text("Попросите подобрать моды или исправить конфликты", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(16.dp))
+                        listOf(
+                            "Подбери сборку для выживания",
+                            "Какие моды сочетаются с шейдерами?",
+                            "Объясни, как объединить BP и RP",
+                            "Как исправить конфликты текстур?"
+                        ).forEach { q ->
+                            OutlinedButton(onClick = { viewModel.sendMessage(q) }, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                                Text(q, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
                     }
                 }
             }

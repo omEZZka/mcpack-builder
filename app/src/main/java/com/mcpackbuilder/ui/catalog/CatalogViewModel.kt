@@ -15,6 +15,7 @@ import com.mcpackbuilder.domain.model.ModCategory
 import com.mcpackbuilder.domain.model.ModEntry
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,6 +46,7 @@ class CatalogViewModel(private val container: AppContainer) : ViewModel() {
     private val _state = MutableStateFlow(CatalogUiState())
     val state: StateFlow<CatalogUiState> = _state.asStateFlow()
     private var loadJob: Job? = null
+    private var queryJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -55,7 +57,22 @@ class CatalogViewModel(private val container: AppContainer) : ViewModel() {
         load(true)
     }
 
-    fun setQuery(q: String) { _state.update { it.copy(query = q) } }
+    fun setQuery(q: String) {
+        _state.update { it.copy(query = q) }
+        queryJob?.cancel()
+        queryJob = viewModelScope.launch {
+            delay(450)
+            load(true)
+        }
+    }
+    fun smartPick() {
+        _state.update { it.copy(sort = CatalogSort.WEEK, tag = CatalogTag.ALL, query = "") }
+        load(true)
+    }
+    fun resetFilters() {
+        _state.update { it.copy(query = "", tag = CatalogTag.ALL, category = ModCategory.MODS, sort = CatalogSort.NEW) }
+        load(true)
+    }
     fun setSort(s: CatalogSort) { _state.update { it.copy(sort = s) }; load(true) }
     fun setSource(src: CatalogSource) { _state.update { it.copy(source = src) }; load(true) }
     fun setCategory(c: ModCategory) { _state.update { it.copy(category = c) }; load(true) }

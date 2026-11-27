@@ -143,7 +143,7 @@ fun BuilderScreen(container: AppContainer, onMessage: (String) -> Unit) {
             // Build button
             Button(
                 onClick = { if (vm.requestExport()) confirmExport = true },
-                enabled = state.mods.isNotEmpty() && !state.building && state.mods.all { it.isDownloaded },
+                enabled = state.mods.isNotEmpty() && !state.building && !state.autoDownloading,
                 modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {
                 Icon(Icons.Default.Build, null, Modifier.size(20.dp))

@@ -18,6 +18,7 @@ data class ModEntry(
     val filePath: String? = null,
     val typeId: Int = 1,
     val downloadCount: Long? = null,
+    val rating: Double? = null,
     val published: String = "",
     val downloadsToday: Long? = null,
     val source: String = "mcpedl"

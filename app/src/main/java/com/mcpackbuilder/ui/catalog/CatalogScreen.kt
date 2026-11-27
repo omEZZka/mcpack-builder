@@ -11,7 +11,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -75,61 +78,76 @@ fun CatalogScreen(container: AppContainer, onMessage: (String) -> Unit, onOpenBu
             }
         }
         
-        Column(Modifier.padding(vertical = 8.dp)) {
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        var showAdvanced by remember { mutableStateOf(false) }
+        Column(Modifier.padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.width(8.dp))
-                Text("Категории:", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(end = 8.dp))
                 ModCategory.entries.forEach { cat ->
                     FilterChip(
-                        selected = state.category == cat, 
-                        onClick = { viewModel.setCategory(cat) }, 
+                        selected = state.category == cat,
+                        onClick = { viewModel.setCategory(cat) },
                         label = { Text(s.category(cat)) }
                     )
                 }
                 Spacer(Modifier.width(8.dp))
+                AssistChip(
+                    onClick = { viewModel.smartPick() },
+                    label = { Text(s.smartSuggest) },
+                    leadingIcon = { Icon(Icons.Default.Star, null, Modifier.size(16.dp)) }
+                )
+                AssistChip(
+                    onClick = { showAdvanced = !showAdvanced },
+                    label = { Text(if (showAdvanced) "Скрыть" else "Ещё") },
+                    leadingIcon = { Icon(Icons.Default.Tune, null, Modifier.size(16.dp)) }
+                )
             }
-            Spacer(Modifier.height(6.dp))
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Spacer(Modifier.width(8.dp))
-                Text("Сортировка:", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(end = 8.dp))
-                CatalogSort.entries.forEach { sort ->
-                    FilterChip(
-                        selected = state.sort == sort, 
-                        onClick = { viewModel.setSort(sort) }, 
-                        label = { Text(s.sort(sort)) }
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
-            }
-            Spacer(Modifier.height(6.dp))
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Spacer(Modifier.width(8.dp))
-                Text("Теги:", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(end = 8.dp))
-                CatalogTag.entries.forEach { tag ->
-                    FilterChip(
-                        selected = state.tag == tag, 
-                        onClick = { viewModel.setTag(tag) }, 
-                        label = { Text(s.tag(tag)) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+            if (showAdvanced) {
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(Modifier.width(8.dp))
+                    CatalogSource.entries.forEach { src ->
+                        FilterChip(
+                            selected = state.source == src,
+                            onClick = { viewModel.setSource(src) },
+                            label = { Text(if (src == CatalogSource.MCPEDL) "MCPEDL" else "mcpehub.org") }
                         )
-                    )
+                    }
+                    Spacer(Modifier.width(8.dp))
                 }
-                Spacer(Modifier.width(8.dp))
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(Modifier.width(8.dp))
+                    CatalogSort.entries.forEach { sort ->
+                        FilterChip(
+                            selected = state.sort == sort,
+                            onClick = { viewModel.setSort(sort) },
+                            label = { Text(s.sort(sort)) }
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                }
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(Modifier.width(8.dp))
+                    CatalogTag.entries.forEach { tag ->
+                        FilterChip(
+                            selected = state.tag == tag,
+                            onClick = { viewModel.setTag(tag) },
+                            label = { Text(s.tag(tag)) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                }
             }
-            Spacer(Modifier.height(6.dp))
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Spacer(Modifier.width(8.dp))
-                Text(s.source + ":", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(end = 8.dp))
-                CatalogSource.entries.forEach { src ->
-                    FilterChip(
-                        selected = state.source == src, 
-                        onClick = { viewModel.setSource(src) }, 
-                        label = { Text(if (src == CatalogSource.MCPEDL) "MCPEDL" else "mcpehub.org") }
+            if (state.query.isNotBlank() || state.tag != CatalogTag.ALL) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    AssistChip(
+                        onClick = { viewModel.resetFilters() },
+                        label = { Text(s.resetFilters) },
+                        leadingIcon = { Icon(Icons.Default.Check, null, Modifier.size(16.dp)) }
                     )
                 }
-                Spacer(Modifier.width(8.dp))
             }
         }
         
@@ -186,14 +204,30 @@ private fun ModCard(mod: ModEntry, added: Boolean, onAdd: () -> Unit) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     mod.category?.let { SmallTag(it) }
                     mod.version?.let { SmallTag(it) }
-                    mod.downloadCount?.let { 
+                    mod.rating?.takeIf { it > 0 }?.let {
+                        Surface(shape = MaterialTheme.shapes.extraSmall, color = MaterialTheme.colorScheme.tertiaryContainer) {
+                            Row(Modifier.padding(horizontal = 6.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Star, null, Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onTertiaryContainer)
+                                Spacer(Modifier.width(3.dp))
+                                Text(
+                                    text = String.format("%.1f", it),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                            }
+                        }
+                    }
+                    mod.downloadCount?.let {
                         Surface(shape = MaterialTheme.shapes.extraSmall, color = MaterialTheme.colorScheme.secondaryContainer) {
-                            Text(
-                                text = formatCompact(it),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
+                            Row(Modifier.padding(horizontal = 6.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Download, null, Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                                Spacer(Modifier.width(3.dp))
+                                Text(
+                                    text = formatCompact(it),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
                         }
                     }
                 }

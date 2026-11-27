@@ -50,11 +50,18 @@ class ChatViewModel(private val container: AppContainer) : ViewModel() {
         _state.update { it.copy(isTyping = true, error = null) }
 
         viewModelScope.launch {
+            val cfg = aiClient.loadConfig()
+            if (!cfg.enabled || cfg.baseUrl.isBlank() || cfg.model.isBlank()) {
+                addMessage(localAnswer(text), false)
+                _state.update { it.copy(isTyping = false) }
+                return@launch
+            }
             try {
                 val history = _state.value.messages
                     .dropLast(1)
                     .map { ChatTurn(if (it.isUser) "user" else "assistant", it.text) }
-                val result = aiClient.chat(text, history)
+                val context = buildContext()
+                val result = aiClient.chat(text, history, context)
                 addMessage(result.message ?: "Не удалось получить ответ", false)
                 if (!result.success) {
                     _state.update { it.copy(error = result.message) }
@@ -64,6 +71,34 @@ class ChatViewModel(private val container: AppContainer) : ViewModel() {
             } finally {
                 _state.update { it.copy(isTyping = false) }
             }
+        }
+    }
+
+    private fun localAnswer(text: String): String {
+        val mods = runCatching { container.selection.mods.value }.getOrDefault(emptyList())
+        val q = text.lowercase()
+        return when {
+            q.contains("конфликт") || q.contains("conflict") ->
+                "Чтобы разобрать конфликты: 1) Откройте «Сборка» — при перезаписи файла побеждает мод, который выше в списке. 2) Поднимите приоритет нужного мода стрелками. 3) Реестры (textures/*.json, sounds/*.json) объединяются автоматически. 4) Script API собирается из scripts/ каждого пака."
+            q.contains("собра") || q.contains("build") || q.contains("bp") || q.contains("rp") ->
+                "Сборка: добавьте моды, скачайте их, задайте имя и формат (.mcaddon/.mcpack) и нажмите «Собрать». Приложение разделит Behavior/Resource Packs, сольёт реестры и упакует архив."
+            q.contains("подбер") || q.contains("порекоменд") || q.contains("совет") || q.contains("рекоменд") ->
+                "Начните с категории «Моды» → «Подобрать» (топ недели). Для выживания хорошо сочетаются реалистичные текстуры + оптимизация + аддоны из тега «Выживание». Подключите AI-агент в Настройках для персональных советов."
+            mods.isNotEmpty() ->
+                "В вашей сборке ${mods.size} мод(ов): ${mods.joinToString { it.title }}. Подключите AI-агент в Настройках → AI Агент для детального анализа."
+            else ->
+                "Я в офлайн-режиме: подскажу по сборке и конфликтам. Для полных ответов подключите AI-агент в Настройках → AI Агент (OpenAI/OpenRouter/Groq/DeepSeek/Ollama)."
+        }
+    }
+
+    private fun buildContext(): String {
+        val cfg = aiClient.loadConfig()
+        val mods = runCatching { container.selection.mods.value }.getOrDefault(emptyList())
+        return buildString {
+            appendLine("Провайдер: ${cfg.provider}, модель: ${cfg.model}.")
+            appendLine("Модов в текущей сборке: ${mods.size}.")
+            if (mods.isNotEmpty()) appendLine("Моды: " + mods.joinToString { it.title })
+            appendLine("Возможности: авто-скачивание ${if (cfg.autoDownload) "вкл" else "выкл"}, авто-фикс ${if (cfg.autoFix) "вкл" else "выкл"}, рекомендации ${if (cfg.recommend) "вкл" else "выкл"}.")
         }
     }
 

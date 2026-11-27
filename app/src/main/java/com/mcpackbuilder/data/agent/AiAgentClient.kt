@@ -77,7 +77,7 @@ class AiAgentClient(private val context: Context) {
     private fun isLocalHost(url: String) =
         url.contains("localhost") || url.contains("127.0.0.1") || url.contains("10.0.2.2") || url.contains("192.168.")
 
-    suspend fun chat(userMessage: String, history: List<ChatTurn>): AiAgentResponse = withContext(Dispatchers.IO) {
+    suspend fun chat(userMessage: String, history: List<ChatTurn>, context: String? = null): AiAgentResponse = withContext(Dispatchers.IO) {
         val config = loadConfig()
         if (config.baseUrl.isBlank() || config.model.isBlank()) {
             return@withContext fail("AI-агент не настроен. Укажите Base URL и модель в настройках.")
@@ -89,7 +89,7 @@ class AiAgentClient(private val context: Context) {
             val messages = JsonArray(buildList {
                 add(buildJsonObject {
                     put("role", "system")
-                    put("content", SYSTEM_PROMPT)
+                    put("content", if (context.isNullOrBlank()) SYSTEM_PROMPT else "$SYSTEM_PROMPT\n\nТекущий контекст:\n$context")
                 })
                 history.takeLast(12).forEach { turn ->
                     add(buildJsonObject {
@@ -175,8 +175,10 @@ class AiAgentClient(private val context: Context) {
 
     companion object {
         const val SYSTEM_PROMPT =
-            "Ты — AI-ассистент приложения MCPack Builder для Minecraft Bedrock. " +
-            "Помогаешь подбирать аддоны, текстуры, шейдеры и карты, объясняешь как собрать сборку, " +
-            "разрешать конфликты и оптимизировать паки. Отвечай кратко, по делу, на русском языке."
+            "Ты — умный AI-ассистент приложения MCPack Builder для Minecraft Bedrock. " +
+            "Помогаешь подбирать аддоны, текстуры, шейдеры и карты, объясняешь как собрать сборку (BP+RP), " +
+            "как разрешать конфликты (перезапись файлов, реестры, Script API) и оптимизировать паки. " +
+            "Отвечай структурировано и кратко на русском: сначала суть, затем шаги списком. " +
+            "Если пользователь просит подобрать моды — перечисли 3-5 конкретных типов аддонов и совместимость."
     }
 }
