@@ -60,6 +60,7 @@ class CatalogViewModel(private val container: AppContainer) : ViewModel() {
     fun setQuery(q: String) {
         _state.update { it.copy(query = q) }
         queryJob?.cancel()
+        // 1-2 символа не дают результатов в API — не дёргаем поиск, ждём 3+ символа
         queryJob = viewModelScope.launch {
             delay(450)
             load(true)
@@ -110,8 +111,7 @@ class CatalogViewModel(private val container: AppContainer) : ViewModel() {
                     loading = refresh || !it.loaded, 
                     loadingMore = !refresh && it.loaded, 
                     error = null, 
-                    page = nextPage,
-                    items = if (refresh) emptyList() else it.items
+                    page = nextPage
                 ) 
             }
             

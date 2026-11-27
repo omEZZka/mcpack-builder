@@ -48,7 +48,10 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
         val params = mutableListOf<String>()
         params += "page=$page"
         params += "page_size=20"
-        if (query.isNotBlank()) params += "q=" + URLEncoder.encode(query, "UTF-8")
+        // API requires полноценный запрос (multi_match + operator AND);
+        // 1-2 символа дают 0 результатов — показываем общий список
+        val effectiveQuery = query.trim().takeIf { it.length >= 3 } ?: ""
+        if (effectiveQuery.isNotBlank()) params += "q=" + URLEncoder.encode(effectiveQuery, "UTF-8")
         params += "sort=" + URLEncoder.encode(sort.api, "UTF-8")
         params += "type_id=${category.typeId ?: 1}"
         if (tags.isNotEmpty()) params += "cf_tags=" + URLEncoder.encode(tags.joinToString(","), "UTF-8")
@@ -98,10 +101,11 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
 
     private suspend fun mcpehubCatalog(query: String, category: ModCategory, page: Int, tag: CatalogTag): CatalogResult {
         val base = category.mcpehubUrl
-        val url = if (query.isBlank()) {
+        val effectiveQuery = query.trim().takeIf { it.length >= 3 } ?: ""
+        val url = if (effectiveQuery.isBlank()) {
             if (page <= 1) base else "${base.trimEnd('/')}/page/$page/"
         } else {
-            val q = URLEncoder.encode(query, "UTF-8")
+            val q = URLEncoder.encode(effectiveQuery, "UTF-8")
             if (page <= 1) "https://mcpehub.org/index.php?do=search&subaction=search&story=$q"
             else "https://mcpehub.org/page/$page/?do=search&subaction=search&story=$q"
         }

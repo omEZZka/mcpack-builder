@@ -152,6 +152,9 @@ fun CatalogScreen(container: AppContainer, onMessage: (String) -> Unit, onOpenBu
         }
         
         Divider()
+        if (state.loading && state.items.isNotEmpty()) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
         Spacer(Modifier.height(4.dp))
 
         when {
