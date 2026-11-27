@@ -35,9 +35,11 @@ Android-приложение (Kotlin/Jetpack Compose) для каталога а
 - Тест соединения различает 401/404/429/сетевые ошибки
 
 ## Каталог (MCPEDL)
-- Без тега: API `https://mcpedl.com/api/list?type_id=...&sort=...&page=...`
-- С тегом: `https://mcpedl.com/tag/{slug}/`
-- MCPEHUB: тег-фильтры отключены (fallback на страницы категорий)
+- Реальный API: `https://api.mcpedl.com/api/search/advanced?page=...&page_size=20&q=...&sort=...&type_id=...&cf_tags=...`
+- type_id: 1=аддоны, 2=карты, 3=текстуры, 4=скрипты, 5=скины, 6=скин-паки
+- cf_tags: слаги из `https://api.mcpedl.com/api/search/tags` (horror, magic, survival, pvp, realistic, parkour, adventure, fantasy, ...)
+- Детали/скачивание: `https://api.mcpedl.com/api/route/slug/{slug}` → downloads[].file (edge.mcpedl.com)
+- MCPEHUB: HTML-парсинг (fallback)
 - Сортировка: `CatalogSort.api` (created_at / popularity_week / popularity_month)
 - Пагинация: `page`, `pageCount`, `total`
 
