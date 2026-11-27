@@ -101,16 +101,17 @@ data class AppStrings(
     val tagPvp: String,
     val tagSurvival: String,
     val tagAdventure: String,
-    val tagRpg: String,
-    val tagFurniture: String,
-    val tagAnimals: String,
-    val tagWeapons: String,
-    val tagCars: String,
     val tagMagic: String,
     val tagRealistic: String,
     val tagParkour: String,
-    val tagCity: String,
-    val tagAnime: String,
+    val tagFantasy: String,
+    val tagRoleplay: String,
+    val tagMultiplayer: String,
+    val tagTechnology: String,
+    val tagCosmetics: String,
+    val tagUtility: String,
+    val tagFood: String,
+    val tagPerformance: String,
     val tags: String,
     val settingsAppearance: String,
     val settingsGeneral: String,
@@ -162,20 +163,20 @@ data class AppStrings(
     fun tag(t: com.mcpackbuilder.domain.model.CatalogTag): String = when (t) {
         com.mcpackbuilder.domain.model.CatalogTag.ALL -> tagAll
         com.mcpackbuilder.domain.model.CatalogTag.HORROR -> tagHorror
-        com.mcpackbuilder.domain.model.CatalogTag.RPG -> tagRpg
-        com.mcpackbuilder.domain.model.CatalogTag.FURNITURE -> tagFurniture
-        com.mcpackbuilder.domain.model.CatalogTag.ANIMALS -> tagAnimals
-        com.mcpackbuilder.domain.model.CatalogTag.GUNS -> tagWeapons
-        com.mcpackbuilder.domain.model.CatalogTag.CARS -> tagCars
         com.mcpackbuilder.domain.model.CatalogTag.MAGIC -> tagMagic
         com.mcpackbuilder.domain.model.CatalogTag.REALISTIC -> tagRealistic
         com.mcpackbuilder.domain.model.CatalogTag.PARKOUR -> tagParkour
-        com.mcpackbuilder.domain.model.CatalogTag.CITY -> tagCity
-        com.mcpackbuilder.domain.model.CatalogTag.ANIME -> tagAnime
+        com.mcpackbuilder.domain.model.CatalogTag.FANTASY -> tagFantasy
+        com.mcpackbuilder.domain.model.CatalogTag.ROLEPLAY -> tagRoleplay
+        com.mcpackbuilder.domain.model.CatalogTag.MULTIPLAYER -> tagMultiplayer
+        com.mcpackbuilder.domain.model.CatalogTag.TECHNOLOGY -> tagTechnology
+        com.mcpackbuilder.domain.model.CatalogTag.COSMETICS -> tagCosmetics
+        com.mcpackbuilder.domain.model.CatalogTag.UTILITY -> tagUtility
+        com.mcpackbuilder.domain.model.CatalogTag.FOOD -> tagFood
+        com.mcpackbuilder.domain.model.CatalogTag.PERFORMANCE -> tagPerformance
         com.mcpackbuilder.domain.model.CatalogTag.PVP -> tagPvp
         com.mcpackbuilder.domain.model.CatalogTag.SURVIVAL -> tagSurvival
         com.mcpackbuilder.domain.model.CatalogTag.ADVENTURE -> tagAdventure
-        com.mcpackbuilder.domain.model.CatalogTag.WEAPONS -> tagWeapons
     }
 }
 
@@ -270,16 +271,17 @@ val RussianStrings = AppStrings(
     tagPvp = "PVP",
     tagSurvival = "Выживание",
     tagAdventure = "Приключения",
-    tagRpg = "RPG",
-    tagFurniture = "Мебель",
-    tagAnimals = "Животные",
-    tagWeapons = "Оружие",
-    tagCars = "Машины",
     tagMagic = "Магия",
     tagRealistic = "Реализм",
     tagParkour = "Паркур",
-    tagCity = "Город",
-    tagAnime = "Аниме",
+    tagFantasy = "Фэнтези",
+    tagRoleplay = "Ролевая",
+    tagMultiplayer = "Мультиплеер",
+    tagTechnology = "Технологии",
+    tagCosmetics = "Косметика",
+    tagUtility = "Утилиты",
+    tagFood = "Еда",
+    tagPerformance = "Производительность",
     tags = "Теги",
     settingsAppearance = "Оформление",
     settingsGeneral = "Общие",
@@ -407,16 +409,17 @@ val EnglishStrings = AppStrings(
     tagPvp = "PVP",
     tagSurvival = "Survival",
     tagAdventure = "Adventure",
-    tagRpg = "RPG",
-    tagFurniture = "Furniture",
-    tagAnimals = "Animals",
-    tagWeapons = "Weapons",
-    tagCars = "Cars",
     tagMagic = "Magic",
     tagRealistic = "Realistic",
     tagParkour = "Parkour",
-    tagCity = "City",
-    tagAnime = "Anime",
+    tagFantasy = "Fantasy",
+    tagRoleplay = "Roleplay",
+    tagMultiplayer = "Multiplayer",
+    tagTechnology = "Technology",
+    tagCosmetics = "Cosmetics",
+    tagUtility = "Utility",
+    tagFood = "Food",
+    tagPerformance = "Performance",
     tags = "Tags",
     settingsAppearance = "Appearance",
     settingsGeneral = "General",
