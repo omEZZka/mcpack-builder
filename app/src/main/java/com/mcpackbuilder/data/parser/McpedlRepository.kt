@@ -6,6 +6,8 @@ import com.mcpackbuilder.domain.model.CatalogSource
 import com.mcpackbuilder.domain.model.CatalogTag
 import com.mcpackbuilder.domain.model.ModCategory
 import com.mcpackbuilder.domain.model.ModEntry
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 import java.io.BufferedReader
 import java.net.HttpURLConnection
@@ -25,9 +27,11 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
         val key = "${source.name}|${category.name}|${sort.name}|${tag.name}|${page}|$trimmedQuery"
         listingCache[key]?.let { return it }
 
-        val result = when (source) {
-            CatalogSource.MCPEDL -> mcpedlCatalog(trimmedQuery, category, page, sort, tag)
-            CatalogSource.MCPEHUB -> mcpehubCatalog(trimmedQuery, category, page, tag)
+        val result = withContext(Dispatchers.IO) {
+            when (source) {
+                CatalogSource.MCPEDL -> mcpedlCatalog(trimmedQuery, category, page, sort, tag)
+                CatalogSource.MCPEHUB -> mcpehubCatalog(trimmedQuery, category, page, tag)
+            }
         }
 
         if (result.items.isNotEmpty()) listingCache[key] = result
@@ -93,13 +97,13 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
     }
 
     private suspend fun mcpehubCatalog(query: String, category: ModCategory, page: Int, tag: CatalogTag): CatalogResult {
-        // MCPEHUB is not easily filterable; keep previous HTML approach via fetcher
         val base = category.mcpehubUrl
         val url = if (query.isBlank()) {
             if (page <= 1) base else "${base.trimEnd('/')}/page/$page/"
         } else {
             val q = URLEncoder.encode(query, "UTF-8")
-            if (page <= 1) "https://mcpehub.org/?s=$q" else "https://mcpehub.org/page/$page/?s=$q"
+            if (page <= 1) "https://mcpehub.org/index.php?do=search&subaction=search&story=$q"
+            else "https://mcpehub.org/page/$page/?do=search&subaction=search&story=$q"
         }
         val doc = fetcher.getDocument(url)
         return parseMcpehubListing(doc.html, doc.finalUrl, category)
@@ -108,25 +112,33 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
     fun parseMcpehubListing(html: String, baseUrl: String, category: ModCategory): CatalogResult {
         val doc = org.jsoup.Jsoup.parse(html, baseUrl)
         val items = linkedSetOf<ModEntry>()
-        val cards = doc.select("article, .post, .entry, .item, .mod-card, .card, li.post-item")
-        val nodes = if (cards.isNotEmpty()) cards else doc.select("a[href]")
-        for (node in nodes) {
-            val link = if (node.tagName() == "a") node else node.selectFirst("a[href*='/mods/'], a[href*='/maps/'], a[href*='/textures/'], a[href*='/shaders/'], a[href]") ?: continue
+        // MCPEHUB: <article><a class="news-item" href="..."><h2>title</h2><img>...</a></article>
+        val cards = doc.select("article")
+        val anchors = if (cards.isNotEmpty()) cards.mapNotNull { it.selectFirst("a.news-item[href], a[href*=news-item], a[href]") }
+                      else doc.select("a[href]")
+        for (link in anchors) {
             val href = normalizeMcpehubUrl(link.absUrl("href").ifBlank { link.attr("href") }, baseUrl) ?: continue
             if (!isMcpehubContentUrl(href)) continue
-            val container = if (node.tagName() == "a") node.parent() ?: node else node
-            val title = container.selectFirst("h1,h2,h3,h4,.title,.entry-title")?.text()?.trim()?.takeIf { it.length > 2 }
+            val container = link.parent() ?: link
+            val title = container.selectFirst("h2, h1, h3, .title")?.text()?.trim()?.takeIf { it.length > 2 }
+                ?: link.attr("title").trim().takeIf { it.length > 2 }
                 ?: link.text().trim().takeIf { it.length > 4 } ?: continue
             if (title.equals("Download", true) || title.equals("Скачать", true)) continue
-            val cover = container.selectFirst("img")?.let { img -> abs(img.attr("data-src").ifBlank { img.attr("data-lazy-src").ifBlank { img.attr("src") } }, baseUrl) }
-            val id = href.trimEnd('/').substringAfterLast('/')
+            val img = container.selectFirst("img")
+            val cover = img?.let { i ->
+                val src = i.attr("data-src").ifBlank { i.attr("data-lazy-src").ifBlank { i.attr("src") } }
+                abs(src, baseUrl)
+            }
+            val dateText = container.selectFirst(".flex.between span, .news-item-info span")?.text()?.trim()
+            val id = href.trimEnd('/').substringAfterLast('/').substringBefore('-').ifBlank { href.hashCode().toString() }
             items += ModEntry(
-                id = id.ifBlank { href.hashCode().toString() },
+                id = id,
                 title = title,
                 coverUrl = cover,
                 pageUrl = href,
                 category = category.name.lowercase(),
                 typeId = category.typeId ?: 1,
+                published = dateText ?: "",
                 source = "mcpehub"
             )
         }
@@ -135,8 +147,8 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
         return CatalogResult(items.toList(), page, pageCount, items.size)
     }
 
-    suspend fun enrich(entry: ModEntry, source: CatalogSource = if (entry.source == "mcpehub") CatalogSource.MCPEHUB else CatalogSource.MCPEDL): ModEntry {
-        detailCache[entry.pageUrl]?.let { return it }
+    suspend fun enrich(entry: ModEntry, source: CatalogSource = if (entry.source == "mcpehub") CatalogSource.MCPEHUB else CatalogSource.MCPEDL): ModEntry = withContext(Dispatchers.IO) {
+        detailCache[entry.pageUrl]?.let { return@withContext it }
         if (entry.source == "mcpehub" || source == CatalogSource.MCPEHUB) {
             val doc = fetcher.getDocument(entry.pageUrl)
             val smart = SmartParser.parseDetail(doc.html, doc.finalUrl, entry.title, entry.coverUrl)
@@ -148,7 +160,7 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
                 downloadLinks = smart.downloadLinks.ifEmpty { entry.downloadLinks }
             )
             detailCache[entry.pageUrl] = detailed
-            return detailed
+            return@withContext detailed
         }
         val slug = entry.pageUrl.trimEnd('/').substringAfterLast('/')
         var links = linkedSetOf<String>()
@@ -187,23 +199,38 @@ class McpedlRepository(private val parser: McpedlParser, private val fetcher: We
             downloadLinks = links.distinct().ifEmpty { entry.downloadLinks }
         )
         detailCache[entry.pageUrl] = detailed
-        return detailed
+        detailed
     }
 
     fun directDownload(urls: List<String>): String? = urls.firstOrNull { hasArchiveExtension(it) }
 
     private fun fetchJson(url: String): String {
-        val conn = URL(url).openConnection() as HttpURLConnection
-        conn.requestMethod = "GET"
-        conn.connectTimeout = 15000
-        conn.readTimeout = 15000
-        conn.setRequestProperty("Accept", "application/json")
-        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36")
-        val code = conn.responseCode
-        val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-        val text = stream?.use { it.bufferedReader().readText() } ?: ""
-        if (code !in 200..299) throw IllegalStateException("HTTP $code: ${text.take(120)}")
-        return text
+        var lastError: Exception? = null
+        repeat(3) { attempt ->
+            try {
+                val conn = URL(url).openConnection() as HttpURLConnection
+                conn.requestMethod = "GET"
+                conn.connectTimeout = 20000
+                conn.readTimeout = 25000
+                conn.setRequestProperty("Accept", "application/json, text/plain, */*")
+                conn.setRequestProperty("Accept-Encoding", "gzip")
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Mobile Safari/537.36")
+                val code = conn.responseCode
+                val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                var text = stream?.use { raw ->
+                    val encoding = conn.contentEncoding?.lowercase()
+                    val input = if (encoding == "gzip") java.util.zip.GZIPInputStream(raw) else raw
+                    input.bufferedReader().readText()
+                } ?: ""
+                conn.disconnect()
+                if (code !in 200..299) throw IllegalStateException("HTTP $code: ${text.take(120)}")
+                return text
+            } catch (e: Exception) {
+                lastError = e
+                if (attempt < 2) try { Thread.sleep(700L * (attempt + 1)) } catch (_: InterruptedException) {}
+            }
+        }
+        throw lastError ?: IllegalStateException("Network error")
     }
 
     private fun normalizeMcpehubUrl(raw: String, base: String): String? {

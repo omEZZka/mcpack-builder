@@ -61,7 +61,7 @@ enum class ModCategory(val path: String, val typeId: Int?, val mcpehubPath: Stri
     MAPS("maps", 2, "maps");
 
     val pageUrl: String get() = "https://mcpedl.com/${path.trim('/')}/"
-    val mcpehubUrl: String get() = "https://mcpehub.org/${mcpehubPath.trim('/')}"
+    val mcpehubUrl: String get() = "https://mcpehub.org/${mcpehubPath.trim('/')}/"
 }
 
 enum class CatalogSort(val api: String) {
