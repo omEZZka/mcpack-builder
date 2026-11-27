@@ -92,5 +92,4 @@ enum class CatalogTag(val mcpedlSlug: String, val mcpehubSlug: String, val label
     UTILITY("utility", ""),
     PERFORMANCE("performance", ""),
     FOOD("food", ""),
-    VANILLA("vanilla", ""),
 }
